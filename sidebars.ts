@@ -6,6 +6,14 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
  * (e.g. `01-databases.md` -> id `backend/databases`).
  */
 const sidebars: SidebarsConfig = {
+  studyPlanSidebar: [
+    {
+      type: 'category',
+      label: '📅 Study Plan',
+      items: ['study-plan'],
+    },
+  ],
+
   backendSidebar: [
     {
       type: 'category',
@@ -86,6 +94,69 @@ const sidebars: SidebarsConfig = {
             'system-design/questions/leaderboard',
           ],
         },
+      ],
+    },
+  ],
+
+  algorithmsSidebar: [
+    {
+      type: 'category',
+      label: 'Algorithms & Data Structures',
+      link: {type: 'doc', id: 'algorithms/index'},
+      items: [
+        'algorithms/problem-solving-framework',
+        'algorithms/arrays-strings',
+        'algorithms/linked-lists-stacks-queues',
+        'algorithms/trees-graphs',
+        'algorithms/dynamic-programming',
+        'algorithms/intervals-greedy',
+        'algorithms/bit-manipulation-math',
+      ],
+    },
+  ],
+
+  frontendSystemDesignSidebar: [
+    {
+      type: 'category',
+      label: 'Frontend System Design',
+      link: {type: 'doc', id: 'frontend-system-design/index'},
+      items: [
+        'frontend-system-design/framework',
+        'frontend-system-design/news-feed',
+        'frontend-system-design/video-player',
+        'frontend-system-design/collaborative-editor',
+        'frontend-system-design/dashboard',
+        'frontend-system-design/component-library',
+      ],
+    },
+  ],
+
+  devopsSidebar: [
+    {
+      type: 'category',
+      label: 'DevOps & Cloud',
+      link: {type: 'doc', id: 'devops/index'},
+      items: [
+        'devops/docker',
+        'devops/cicd',
+        'devops/monitoring',
+        'devops/cloud-services',
+        'devops/infrastructure',
+      ],
+    },
+  ],
+
+  behavioralSidebar: [
+    {
+      type: 'category',
+      label: 'Behavioral & Leadership',
+      link: {type: 'doc', id: 'behavioral/index'},
+      items: [
+        'behavioral/star-method',
+        'behavioral/common-questions',
+        'behavioral/leadership',
+        'behavioral/conflict-failure',
+        'behavioral/negotiation',
       ],
     },
   ],

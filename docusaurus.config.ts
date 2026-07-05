@@ -7,7 +7,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "Interview Notes",
   tagline:
-    "Tài liệu ôn phỏng vấn — Backend · Frontend · React Native · System Design",
+    "Tài liệu ôn phỏng vấn — Fullstack · Backend · Frontend · React Native · System Design · DevOps · Behavioral",
   favicon: "img/favicon.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -56,10 +56,15 @@ const config: Config = {
     navbar: {
       title: "Interview Notes",
       items: [
+        { to: "/docs/study-plan", label: "📅 Study Plan", position: "left" },
+        { to: "/docs/algorithms", label: "Algorithms", position: "left" },
         { to: "/docs/backend", label: "Backend", position: "left" },
         { to: "/docs/frontend", label: "Frontend", position: "left" },
         { to: "/docs/react-native", label: "React Native", position: "left" },
         { to: "/docs/system-design", label: "System Design", position: "left" },
+        { to: "/docs/frontend-system-design", label: "FE System Design", position: "left" },
+        { to: "/docs/devops", label: "DevOps", position: "left" },
+        { to: "/docs/behavioral", label: "Behavioral", position: "left" },
         { to: "/docs/cv/cv-deep-dive", label: "CV", position: "left" },
         {
           to: "/docs/poc-ai-builder",

@@ -21,9 +21,9 @@ system_design/
     ├── 07-message-queue.md       📝 chỉ đề bài + checklist
     ├── 08-search-autocomplete.md 📝 chỉ đề bài + checklist
     ├── 09-web-crawler.md         📝 chỉ đề bài + checklist
-    ├── 10-chat-whatsapp.md       📝 chỉ đề bài + checklist
-    ├── 11-notification-system.md 📝 chỉ đề bài + checklist
-    ├── 12-youtube-streaming.md   📝 chỉ đề bài + checklist
+    ├── 10-chat-whatsapp.md       ✅ giải chi tiết mẫu
+    ├── 11-notification-system.md ✅ giải chi tiết mẫu
+    ├── 12-youtube-streaming.md   ✅ giải chi tiết mẫu
     ├── 13-google-drive.md        📝 chỉ đề bài + checklist
     ├── 14-uber-ride.md           📝 chỉ đề bài + checklist
     └── 15-leaderboard.md         📝 chỉ đề bài + checklist
@@ -66,9 +66,9 @@ system_design/
 | 9 | **Design Instagram** | image storage (S3+CDN), feed, pre-generation | *(trong README)* |
 | 10 | **Design Search Autocomplete (Typeahead)** 🔥 | Trie, top-K, sharding by prefix | [08](./questions/08-search-autocomplete.md) 📝 |
 | 11 | **Design a Web Crawler** | BFS queue, dedup (bloom filter), politeness, freshness | [09](./questions/09-web-crawler.md) 📝 |
-| 12 | **Design a Chat System** (WhatsApp/Messenger) 🔥 | WebSocket, message ordering, delivery status, fanout | [10](./questions/10-chat-whatsapp.md) 📝 |
-| 13 | **Design a Notification System** | multi-channel (push/sms/email), rate limit, fanout | [11](./questions/11-notification-system.md) 📝 |
-| 14 | **Design YouTube / Netflix (streaming)** 🔥 | chunked upload, transcoding, CDN, adaptive bitrate | [12](./questions/12-youtube-streaming.md) 📝 |
+| 12 | **Design a Chat System** (WhatsApp/Messenger) 🔥 | WebSocket, message ordering, delivery status, fanout | [10](./questions/10-chat-whatsapp.md) ✅ |
+| 13 | **Design a Notification System** | multi-channel (push/sms/email), rate limit, fanout | [11](./questions/11-notification-system.md) ✅ |
+| 14 | **Design YouTube / Netflix (streaming)** 🔥 | chunked upload, transcoding, CDN, adaptive bitrate | [12](./questions/12-youtube-streaming.md) ✅ |
 | 15 | **Design Dropbox / Google Drive** | chunk sync, conflict resolution (OT/CRDT), block storage | [13](./questions/13-google-drive.md) 📝 |
 | 16 | **Design Ticketmaster / Seat booking** | concurrency, locking, idempotent hold | *(trong README)* |
 | 17 | **Design Quora / Reddit** | ranking, nested comments, vote aggregation | *(trong README)* |
