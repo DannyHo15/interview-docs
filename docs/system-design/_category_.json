@@ -1,0 +1,8 @@
+{
+  "label": "System Design",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Framework giải system design + 15 câu hỏi kinh điển (URL shortener, Twitter feed, rate limiter, chat, YouTube...)."
+  }
+}

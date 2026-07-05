@@ -1,0 +1,8 @@
+{
+  "label": "Câu hỏi kinh điển",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "15 câu system design kinh điển — URL shortener, Twitter newsfeed, rate limiter, Pastebin, distributed cache, key-value store, message queue, search autocomplete, web crawler, chat (WhatsApp), notification system, YouTube streaming, Google Drive, Uber ride, leaderboard."
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "label": "Frontend",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Kiến thức frontend interview — React core, state management, performance, TypeScript, styling, browser/network, a11y/testing."
+  }
+}

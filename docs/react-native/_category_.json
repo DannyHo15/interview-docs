@@ -1,0 +1,8 @@
+{
+  "label": "React Native",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Kiến thức React Native interview — core, navigation/state, performance, Clean Architecture, native/build, device integrations, debugging/testing."
+  }
+}

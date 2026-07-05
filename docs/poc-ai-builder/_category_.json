@@ -1,0 +1,8 @@
+{
+  "label": "PoC AI Builder",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Project walkthrough — PoC AI Builder: mục tiêu, kiến trúc, tech stack, lessons learned."
+  }
+}
