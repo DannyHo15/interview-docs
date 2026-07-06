@@ -21,3 +21,4 @@ yarn-error.log*
 .omc/state
 .omc/sessions
 .commandcode/taste
+.omc

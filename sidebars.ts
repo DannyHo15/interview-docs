@@ -165,7 +165,7 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'CV & Phỏng vấn',
-      items: ['cv/cv-deep-dive', 'cv/cmc-global-ai-solution'],
+      items: ['cv/cv-deep-dive', 'cv/alphasphere-fullstack', 'cv/interview_prep_optisigns_vi', 'cv/cmc-global-ai-solution'],
     },
   ],
 
