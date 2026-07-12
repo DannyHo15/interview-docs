@@ -1,37 +1,97 @@
-# Chuẩn bị phỏng vấn — FPT Telecom
-## Front-End Developer (React) · INFMN (Hạ tầng Miền Nam) · HCMC
+# FPT Telecom Prep Rewrite — Implementation Plan
 
-> **Về role:** Đây là vị trí Front-End **thuần**, build dashboard giám sát hạ tầng viễn thông (CPE, Wi-Fi, network, QoE). Đơn vị quản lý là **Trung tâm Phát triển & Quản lý Hạ tầng Miền Nam (INFMN)** — nơi vận hành mạng lưới hạ tầng phía Nam của FPT Telecom. JD cốt lõi chỉ 2 thứ: **2+ năm React + TypeScript** và **kinh nghiệm Dashboard / xử lý dữ liệu lớn**.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Chiến lược position:** Pitch mình là **frontend chuyên dashboard phức tạp + xử lý dữ liệu lớn** — KHÔNG pitch full-stack (tránh cảm giác sẽ chán role thuần). Bằng chứng chính: **EVN GENCO3** — dashboard enterprise 25+ module với ECharts, RBAC, multi-tab keep-alive.
+**Goal:** Ghi đè `docs/cv/interview_prep_fpt_telecom.md` bằng tài liệu prep sâu (theo OptiSigns style), tập trung EVN GENCO3 + domain viễn thông.
+
+**Architecture:** 4 phần prose — Bối cảnh & pitch → 5 case study EVN (template làm-gì/vì-sao/trade-off/câu nói mẫu/follow-up) → 4 thuật ngữ domain + câu trả lời mẫu → Behavioral + câu hỏi hỏi lại. Mỗi case study có map JD trực tiếp, đánh dấu `⚠️ Suy luận` ở chỗ suy luận.
+
+**Tech Stack:** Markdown (Docusaurus), không code.
+
+## Global Constraints
+
+- File đích: `docs/cv/interview_prep_fpt_telecom.md` (ghi đè toàn bộ)
+- Không đổi `sidebars.ts` (đã đăng ký `cv/interview_prep_fpt_telecom`)
+- Không lặp nội dung `docs/frontend/` (React/TS kinh điển) hay `docs/frontend-system-design/04-dashboard.md`
+- Mọi chỗ suy luận phải có `⚠️ Suy luận` để user xác nhận
+- Phong cách Việt-Anh song ngữ như `docs/cv/interview_prep_optisigns_vi.md` (giải thích VN, thuật ngữ kỹ thuật giữ EN)
+- Verification: `bun run build` pass + self-check 5 thành phần template mỗi case study
+- Commit convention (theo git log): `docs(cv): rewrite FPT Telecom prep — depth on EVN + telco domain`
+
+---
+
+## File Structure
+
+| File | Hành động | Trách nhiệm |
+|------|-----------|-------------|
+| `docs/cv/interview_prep_fpt_telecom.md` | Ghi đè | Tài liệu prep duy nhất cho role này |
+
+Một file, một trách nhiệm: prep phỏng vấn FPT Telecom Frontend.
+
+---
+
+### Task 1: Phần 1 — Bối cảnh role & chiến lược position
+
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (ghi đè từ đầu)
+
+**Nội dung cụ thể cần viết:**
+
+- [ ] **Step 1: Viết phần 1**
+
+Ghi đè file với phần mở + phần 1. Nội dung:
+
+**Tiêu đề:** `# Chuẩn bị phỏng vấn — FPT Telecom`
+**Sub:** `## Front-End Developer (React) · INFMN (Hạ tầng Miền Nam) · HCMC`
+
+**Blockquote bối cảnh (1 đoạn ~120 từ):**
+- Role là FE thuần, build dashboard giám sát hạ tầng viễn thông (CPE, Wi-Fi, network, QoE).
+- Đơn vị: Trung tâm Phát triển & Quản lý Hạ tầng Miền Nam (INFMN) — vận hành mạng phía Nam.
+- JD cốt lõi 2 thứ: 2+ năm React+TS + kinh nghiệm Dashboard/xử lý dữ liệu lớn.
+
+**Chiến lược position (1 đoạn ~80 từ):**
+- Pitch "frontend chuyên dashboard phức tạp + xử lý dữ liệu lớn" — KHÔNG pitch full-stack (tránh cảm giác sẽ chán role thuần).
+- Bằng chứng chính: EVN GENCO3 (dashboard 25+ module, ECharts, RBAC).
+
+**Bảng ánh xạ CV↔JD (4 dòng):**
 
 | Yêu cầu JD | Bằng chứng CV |
 |---|---|
 | Dashboard application | EVN GENCO3 — 25+ module, Ant Design Pro |
 | Data visualization (chart) | ECharts (time-series, gauge, heatmap) ở EVN; TradingView ở Avatar48 |
-| Xử lý dữ liệu lớn | TanStack Query + memoize selector + virtualization (NNG 8s→1s) |
+| Xử lý dữ liệu lớn | TanStack Query + memoize selector + virtualization (NNG) |
 | React + TS 2+ năm | 4 năm full-stack TS, frontend xuyên suốt |
 
-> **Câu pitch mở (đọc to):** "Em là frontend developer 4 năm kinh nghiệm, chuyên xây dashboard phức tạp và xử lý dữ liệu lớn. Dự án tiêu biểu là EVN GENCO3 — dashboard enterprise 25+ module với ECharts, RBAC, multi-tab keep-alive. Em đang tìm role frontend tập trung vào dashboard/data-viz, nên role ở INFMN rất match."
+**Câu pitch mở (blockquote):**
+> "Em là frontend developer 4 năm kinh nghiệm, chuyên xây dashboard phức tạp và xử lý dữ liệu lớn. Dự án tiêu biểu là EVN GENCO3 — dashboard enterprise 25+ module với ECharts, RBAC, multi-tab keep-alive. Em đang tìm role frontend tập trung vào dashboard/data-viz, nên role ở INFMN rất match."
 
 ---
 
-## 1. EVN GENCO3 — bảo vệ từng quyết định kỹ thuật
+### Task 2: Phần 2.1 — Case study ECharts cho time-series với dataset lớn
 
-Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì → vì sao → trade-off nói thật → câu nói mẫu đọc-to → follow-up có thể bị đào.** Mọi chỗ suy luận có đánh dấu `⚠️` để bạn xác nhận lại thực tế trước khi dùng trả lời phỏng vấn.
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
 
-### 1.1 Dùng ECharts (canvas renderer) cho time-series với dataset lớn
+**Nội dung cụ thể:**
 
-> 📌 **JD match:** "Trực quan hóa dữ liệu: biểu đồ time-series..." + "ứng dụng xử lý dữ liệu lớn"
+- [ ] **Step 1: Viết case 2.1**
+
+**Header:** `## 1. EVN GENCO3 — bảo vệ từng quyết định kỹ thuật`
+
+**Intro ngắn (2 câu):** Mỗi quyết định dưới đây trình bày theo cấu trúc OptiSigns: làm gì → vì sao → trade-off nói thật. Mọi chỗ suy luận có đánh dấu để bạn xác nhận lại trước khi dùng trả lời.
+
+**Case 2.1:** `### 1.1 Dùng ECharts (canvas renderer) cho time-series với dataset lớn`
+
+**JD match (blockquote):** `> 📌 JD match: "Trực quan hóa dữ liệu: biểu đồ time-series..." + "ứng dụng xử lý dữ liệu lớn"`
 
 **Bối cảnh:** EVN GENCO3 hiển thị nhiều chart time-series (thông lượng, công suất, tải theo thời gian) trên cùng một dashboard. Mỗi chart có thể tới hàng nghìn điểm dữ liệu.
 
 ⚠️ *Suy luận dựa trên stack ECharts — xác nhận: em dùng canvas renderer (mặc định) hay SVG? Dataset lớn cỡ nào (hàng nghìn hay hàng chục nghìn điểm)?*
 
-**Làm gì:** Cấu hình ECharts với `renderer: 'canvas'` (mặc định), bật `progressive` + `progressiveThreshold` cho series có nhiều điểm. Khi update real-time thì dùng `appendData()` thay vì `setOption` lại toàn bộ.
+**Làm gì:** Cấu hình ECharts với `renderer: 'canvas'` (mặc định), bật `progressive` + `progressiveThreshold` cho series có nhiều điểm. Dùng `appendData()` khi update real-time thay vì `setOption` lại toàn bộ.
 
 **Vì sao:**
-- Canvas render vẽ trực tiếp lên pixel — độ phức tạp không phụ thuộc số DOM node, nên 10.000 điểm vẫn mượt. SVG thì mỗi điểm = 1 DOM element → browser nặng.
+- Canvas render vẽ trực tiếp lên pixel — độ phức tạp không phụ thuộc số lượng DOM node, nên 10.000 điểm vẫn mượt. SVG thì mỗi điểm = 1 DOM element → browser nặng.
 - `progressive` chia data thành chunk, render từng phần qua nhiều frame → không block UI thread.
 - `appendData` chỉ thêm điểm mới vào series hiện có, không tính lại toàn bộ option — phù hợp dashboard real-time.
 
@@ -47,9 +107,16 @@ Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì →
 
 ---
 
-### 1.2 Zustand slice per module cho dashboard 25+ module
+### Task 3: Phần 2.2 — Case study State cho 25+ module (Zustand slice)
 
-> 📌 **JD match:** "ứng dụng dạng bảng điều khiển (Dashboard)" — dashboard nhiều module
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
+
+- [ ] **Step 1: Viết case 2.2**
+
+**Case:** `### 1.2 Zustand slice per module cho dashboard 25+ module`
+
+**JD match:** `> 📌 JD match: "ứng dụng dạng bảng điều khiển (Dashboard)" — dashboard nhiều module`
 
 **Bối cảnh:** EVN GENCO3 có 25+ module (báo cáo, giám sát, cấu hình...). Mỗi module có state riêng (filter, selection, form tạm). Cần tránh state global khổng lồ khó maintain.
 
@@ -68,18 +135,25 @@ Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì →
 - Slice per module = nhiều file → onboarding người mới cần hiểu cấu trúc.
 
 **Câu nói mẫu (đọc to):**
-> "Em chia state theo slice per module — mỗi module trong 25+ module có Zustand slice riêng, compose vào store tổng. Lý do là state module A không nằm chung object với module B, nên component module A không bị re-render khi module B đổi. Selector dùng shallow equality để chỉ subscribe đúng field mình cần. So với Redux thì Zustand ít boilerplate và không cần provider, phù hợp dashboard cỡ này. Trade-off là DevTools yếu hơn và cross-module state phải lift lên slice chung — đôi khi phải nghĩ kỹ đặt state ở đâu."
+> "Em chia state theo slice per module — mỗi module 25+ có Zustand slice riêng, compose vào store tổng. Lý do là state module A không nằm chung object với module B, nên component module A không bị re-render khi module B đổi. Selector dùng shallow equality để chỉ subscribe đúng field mình cần. So với Redux thì Zustand ít boilerplate và không cần provider, phù hợp dashboard cỡ này. Trade-off là DevTools yếu hơn và cross-module state phải lift lên slice chung — đôi khi phải nghĩ kỹ đặt state ở đâu."
 
 **Follow-up:** "25 module × state mỗi module → store có quá nặng không?"
 → Store tổng chỉ giữ reference tới các slice, mỗi slice tự quản data. Zustand store thực ra là 1 object — không "nặng" theo số module. Vấn đề thực sự là cross-module state: em giải quyết bằng cách lift filter chung lên slice `shared`, các module subscribe slice đó.
 
 ---
 
-### 1.3 Multi-tab keep-alive + chống memory leak
+### Task 4: Phần 2.3 — Case study Multi-tab keep-alive + memory leak
 
-> 📌 **JD match:** Dashboard UX — user vận hành mở nhiều tab giám sát song song
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
 
-**Bối cảnh:** EVN GENCO3 dùng giao diện multi-tab (kiểu Admin Ant Design Pro). User mở nhiều tab module song song. Yêu cầu: chuyển tab không mất state (filter, scroll position, form tạm).
+- [ ] **Step 1: Viết case 2.3**
+
+**Case:** `### 1.3 Multi-tab keep-alive + chống memory leak`
+
+**JD match:** `> 📌 JD match: Dashboard UX — user vận hành mở nhiều tab giám sát song song`
+
+**Bối cảnh:** EVN GENCO3 dùng giao diện multi-tab (giả Admin Ant Design Pro). User mở nhiều tab module song song. Yêu cầu: chuyển tab không mất state (filter, scroll position, form tạm).
 
 ⚠️ *Suy luận — xác nhận: em dùng `react-activation`, Ant Design Pro KeepAlive, hay custom portal?*
 
@@ -107,9 +181,16 @@ Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì →
 
 ---
 
-### 1.4 RBAC — route guard + component directive
+### Task 5: Phần 2.4 — Case study RBAC
 
-> 📌 **JD match:** Dashboard nội bộ đội vận hành — chắc chắn cần phân quyền theo role/vùng miền
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
+
+- [ ] **Step 1: Viết case 2.4**
+
+**Case:** `### 1.4 RBAC — route guard + component directive`
+
+**JD match:** `> 📌 JD match: Dashboard nội bộ đội vận hành — chắc chắn cần phân quyền theo role/vùng miền`
 
 **Bối cảnh:** EVN GENCO3 là dashboard enterprise nội bộ — nhiều role (admin, operator, viewer) + quyền khác nhau per module.
 
@@ -141,9 +222,16 @@ Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì →
 
 ---
 
-### 1.5 Tối ưu render khi data real-time thay đổi liên tục
+### Task 6: Phần 2.5 — Case study Tối ưu render real-time
 
-> 📌 **JD match:** Dashboard giám sát mạng = dữ liệu update liên tục; tránh re-render toàn bộ
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
+
+- [ ] **Step 1: Viết case 2.5**
+
+**Case:** `### 1.5 Tối ưu render khi data real-time thay đổi liên tục`
+
+**JD match:** `> 📌 JD match: Dashboard giám sát mạng = dữ liệu update liên tục; tránh re-render toàn bộ`
 
 **Bối cảnh:** Dashboard vận hành (giống INFMN sẽ build) có dữ liệu update liên tục — thiết bị rớt mạng, throughput đổi. Nếu re-render toàn dashboard mỗi update → giật lag.
 
@@ -168,55 +256,98 @@ Mỗi quyết định dưới đây trình bày theo cấu trúc: **làm gì →
 **Câu nói mẫu (đọc to):**
 > "Dashboard real-time thì vấn đề lớn nhất là tránh re-render toàn bộ mỗi update. Em giải quyết theo 3 lớp: thứ nhất, granular update — TanStack Query cache theo queryKey theo resource ID, nên update 1 device chỉ trigger chart của device đó. Thứ hai, React.memo kết hợp shallow compare để component chart không re-render khi data không đổi. Thứ ba, throttle update — nếu data tới 10 lần/giây em gộp lại mỗi 500ms, mắt người không nhận ra khác biệt mà CPU giảm rõ. Trade-off là throttle tạo độ trễ, nên với alert em giữ realtime, chỉ throttle phần chart."
 
-**Follow-up:** "Alert realtime mà chart throttle — user thấy alert nhưng chart chưa update, mâu thuẫn?"
+**Follow-up:** "Alert realtime mà chart throttle — user thấy alert nhưng chart chưa update,矛盾?"
 → Alert và chart là 2 luồng riêng: alert push ngay qua WebSocket/SSE, chart update qua throttled state. Nếu user click alert để xem chart thì force refetch chart ngay (bypass throttle) — đảm bảo nhất quán.
 
 ---
 
-## 2. Domain viễn thông — hiểu dữ liệu dashboard hiển thị
+### Task 7: Phần 3 — Domain viễn thông (CPE/Wi-Fi/Network/QoE)
 
-Phần này phân biệt bạn với ứng viên khác. Hiểu CPE/Wi-Fi/QoE là gì → trả lời câu "em tưởng tượng dashboard này hiển thị gì" cực tự tin.
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
 
-### CPE (Customer Premises Equipment)
-- **Là gì:** Thiết bị đặt tại nhà khách hàng (router ONT, modem, Wi-Fi AP) do FPT cấp.
+- [ ] **Step 1: Viết phần 3**
+
+**Header:** `## 2. Domain viễn thông — hiểu dữ liệu dashboard hiển thị`
+
+**Intro (2 câu):** Phần này phân biệt bạn với ứng viên khác. Hiểu CPE/Wi-Fi/QoE là gì → trả lời "em tưởng tượng dashboard này hiển thị gì" cực tự tin.
+
+**4 block, mỗi block theo template:**
+
+**Block CPE:**
+- **Là gì:** Customer Premises Equipment — thiết bị đặt tại nhà khách hàng (router ONT, modem, Wi-Fi AP) do FPT cấp.
 - **Dữ liệu dashboard hiển thị:** trạng thái online/offline, model, firmware version, uptime, lỗi phần cứng, vị trí địa lý.
 - **Trong EVN em đã xử lý tương tự:** trạng thái thiết bị điện (online/offline, uptime) — cùng pattern giám sát thiết bị.
 
-### Wi-Fi
-- **Là gì:** Mạng không dây tại nhà khách hàng.
+**Block Wi-Fi:**
+- **Là gì:** mạng không dây tại nhà khách hàng.
 - **Dữ liệu:** tín hiệu (RSSI/dBm), băng tần 2.4G/5G, số thiết bị kết nối, throughput, dead-zone.
 - **Trong EVN:** giám sát thông lượng/suy hao tín hiệu — cùng loại chart time-series.
 
-### Network
-- **Là gì:** Hạ tầng lõi/phân phối của FPT.
+**Block Network:**
+- **Là gì:** hạ tầng lõi/phân phối của FPT.
 - **Dữ liệu:** bandwidth sử dụng, packet loss, latency, trạng thái link, topology.
 - **Trong EVN:** giám sát tải mạng điện — bandwidth/throughput time-series.
 
-### QoE (Quality of Experience)
-- **Là gì:** Điểm trải nghiệm khách hàng, mashup nhiều metric.
+**Block QoE:**
+- **Là gì:** Quality of Experience — điểm trải nghiệm khách hàng, mashup nhiều metric.
 - **Dữ liệu:** điểm QoE tổng hợp (0–100), tỷ lệ hài lòng, rớt mạng, IPTV giật.
 - **Trong EVN:** KPI tổng hợp trải nghiệm — cùng concept aggregate score.
 
-### Câu trả lời mẫu — "Em sẽ thiết kế dashboard giám sát mạng như thế nào?"
+**Câu trả lời mẫu hoàn chỉnh — "Em sẽ thiết kế dashboard giám sát mạng như thế nào?":**
 
 > "Em sẽ chia dashboard theo hierarchy 3 tầng. Tầng 1 — tổng quan: topology map hiển thị trạng thái mạng toàn khu vực + KPI QoE tổng hợp (gauge 0–100). Tầng 2 — drill-down theo khu vực: list CPE ở khu vực đó, chart time-series thông lượng/latency. Tầng 3 — chi tiết từng CPE: trạng thái, firmware, lịch sử sự cố. Chart chính là time-series cho throughput/latency, gauge cho QoE, heatmap cho mật độ thiết bị. Phần alert realtime qua WebSocket — khi thiết bị rớt mạng thì push ngay. Phần chart thì throttle để tránh giật. Em từng làm pattern tương tự ở EVN GENCO3 — dashboard 25+ module với ECharts, nên tiếp cận này quen thuộc."
 
 ---
 
-## 3. Behavioral + câu hỏi hỏi lại
+### Task 8: Phần 4 — Behavioral + câu hỏi hỏi lại
+
+**Files:**
+- Modify: `docs/cv/interview_prep_fpt_telecom.md` (append)
+
+- [ ] **Step 1: Viết phần 4**
+
+**Header:** `## 3. Behavioral + câu hỏi hỏi lại`
+
+**3 câu behavioral (bảng):**
 
 | Câu hỏi | Nên dẫn bằng |
 |---|---|
-| Giới thiệu bản thân | Câu pitch ở đầu file — frontend chuyên dashboard, EVN GENCO3 là bằng chứng. |
+| Giới thiệu bản thân | [Câu pitch ở phần 1 — frontend chuyên dashboard, EVN GENCO3 là bằng chứng] |
 | Vì sao chọn FPT Telecom / INFMN? | FPT Telecom tiên phong Internet VN; INFMN vận hành hạ tầng quy mô lớn → dashboard em build phục vụ vận hành thật, tác động hàng triệu khách hàng. Em thích build tool nội bộ có impact thực tế. |
-| Bug khó nhất / thách thức lớn? | Chọn 1: multi-tab keep-alive memory leak (case 1.3) HOẶC tối ưu render real-time (case 1.5). |
+| Bug khó nhất / thách thức lớn? | [Chọn 1: multi-tab keep-alive memory leak (case 1.3) HOẶC tối ưu render real-time (case 1.5)] |
 
-**Câu hỏi nên hỏi ngược lại nhà tuyển dụng:**
-
+**5 câu hỏi hỏi lại (numbered list):**
 1. Dữ liệu CPE/Wi-Fi/QoE push real-time (WebSocket/SSE) hay pull (polling)? Tần suất refresh?
 2. Dashboard phục vụ khoảng bao nhiêu user nội bộ? Lượng CPE đang giám sát cỡ nào?
 3. Đội đang dùng thư viện chart nào? Có design system riêng không?
 4. API đã có sẵn (REST/GraphQL) hay frontend góp phần định nghĩa contract? Backend dùng gì?
-5. Có yêu cầu alert real-time khi thiết bị rớt mạng không? Em sẽ cần xử lý WebSocket/SSE không?
+5. Có yêu cầu alert real-time khi thiết bị rớt mạng không? Em sẽ cần xử lý WebSocket/SSE?
 
-> Đừng hỏi lương/phúc lợi ở vòng kỹ thuật — để dành vòng HR/offer.
+**Footer (1 câu):** Đừng hỏi lương/phúc lợi ở vòng kỹ thuật — để dành vòng HR/offer.
+
+---
+
+### Task 9: Build verify + self-check
+
+**Files:**
+- Test: `bun run build`
+
+- [ ] **Step 1: Chạy build**
+
+Run: `cd /Users/thanhdanh/Danny/PROJECT/interview/interview-docs && bun run build`
+Expected: `[SUCCESS] Generated static files in "build".` — không lỗi.
+
+- [ ] **Step 2: Self-check 5 thành phần template mỗi case study**
+
+Kiểm tra file `docs/cv/interview_prep_fpt_telecom.md`:
+- Mỗi case (1.1–1.5) có: JD match + bối cảnh + làm gì + vì sao + trade-off + câu nói mẫu + follow-up?
+- Mọi chỗ suy luận có `⚠️ Suy luận`?
+- Không lặp nội dung `docs/frontend/`?
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add docs/cv/interview_prep_fpt_telecom.md docs/superpowers/
+git commit -m "docs(cv): rewrite FPT Telecom prep — depth on EVN + telco domain"
+```
