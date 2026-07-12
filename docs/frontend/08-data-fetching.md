@@ -116,6 +116,7 @@ while (true) {
   text += decoder.decode(value, { stream: true });   // ghép từng đoạn tới
   setText(text);                                       // re-render dần → hiệu ứng "gõ chữ"
 }
+text += decoder.decode(); setText(text);  // xả bộ đệm byte cuối (ký tự nhiều byte bị cắt ngang chunk cuối)
 ```
 
 **Bẫy thường gặp:**
@@ -193,7 +194,7 @@ useQuery({
   refetchInterval: (query) => {
     const status = query.state.data?.status;
     if (status === 'done' || status === 'failed') return false;  // ✋ dừng khi đã xong
-    if (query.state.fetchStatus === 'error') return 5000;        // giãn nhịp khi lỗi
+    if (query.state.status === 'error') return 5000;             // giãn nhịp khi lỗi (fetchStatus không có 'error')
     return 2000;                                                  // bình thường poll mỗi 2s
   },
   refetchIntervalInBackground: false,  // không poll khi tab bị ẩn

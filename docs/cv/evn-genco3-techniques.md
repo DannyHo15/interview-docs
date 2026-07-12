@@ -239,6 +239,193 @@ Thêm một module mới là quy trình 6 bước cố định (tạo api → co
 
 ---
 
+## 11. Code minh họa — rút từ source thật 🔥
+
+> Các đoạn dưới đây rút gọn từ chính source dự án (đã bỏ chi tiết phụ, giữ đúng pattern). Học thuộc pattern, không cần thuộc từng dòng — khi live-code hoặc bị hỏi "làm cụ thể thế nào" thì gõ lại được.
+
+### 11.1 Request client: builder `.json()` + interceptor (§1)
+
+`src/utils/request.ts` — điểm nhấn: đọc token bằng `getState()` (ngoài React), gắn `X-Lang`, xóa `Content-Type` cho FormData, xử lý 401/428 tập trung.
+
+```ts
+// Đọc token NGOÀI component — ưu điểm lớn của Zustand so với Context
+function getAccessToken() {
+  return useAuthStore.getState().accessToken || getTokenCookie() || "";
+}
+
+// Builder nhẹ: tách "tạo request" khỏi "lấy data", ép kiểu qua generic <T>
+function wrapResponse<T>(promise: Promise<AxiosResponse<T>>): RequestBuilder<T> {
+  return { json: async <R = T>() => (await promise).data as unknown as R };
+}
+
+instance.interceptors.request.use((config) => {
+  if (!config.ignoreLoading) globalProgress.start();        // loading toàn cục
+  if (!config.skipAuth) {
+    const token = getAccessToken();
+    if (token) config.headers.set(AUTH_HEADER, `Bearer ${token}`);
+  }
+  const lang = usePreferencesStore.getState().language;      // đồng bộ ngôn ngữ 2 đầu
+  if (lang) config.headers.set(LANG_HEADER, lang);
+
+  // FormData: xóa Content-Type để trình duyệt tự set boundary cho multipart
+  if (config.data instanceof FormData) config.headers.delete("Content-Type");
+  return config;
+});
+
+instance.interceptors.response.use(
+  (res) => { finalizeLoading(res.config); return res; },
+  (error) => {
+    finalizeLoading(error.config);
+    if (error.response?.status === 401 && !error.config?.skipAuth) goLogin();
+    else if (isMustChangePasswordError(error)) goChangePassword();  // 428
+    else handleErrorResponse(error);
+    return Promise.reject(error.response?.data ?? error);
+  },
+);
+```
+
+> Dùng: `const user = await request.get<User>("/me").json();`
+
+### 11.2 Loading toàn cục bằng đếm request (§2)
+
+`src/utils/request/global-progress.ts` — mở spinner khi đếm `0→1`, đóng khi về `0`.
+
+```ts
+let requestCount = 0;
+export const globalProgress = {
+  start() {
+    if (requestCount === 0) useGlobalStore.getState().openGlobalSpin(); // chỉ mở 1 lần
+    requestCount++;
+  },
+  done() {
+    requestCount = Math.max(requestCount - 1, 0);       // không cho âm
+    if (requestCount === 0) useGlobalStore.getState().closeGlobalSpin();
+  },
+  forceFinish() { requestCount = 0; useGlobalStore.getState().closeGlobalSpin(); },
+};
+```
+
+> Chốt: 5 request song song chỉ bật/tắt spinner **một lần** — tránh nhấp nháy khi request A xong mà B còn chạy.
+
+### 11.3 Zustand: reset chéo store + đọc/ghi ngoài React (§3)
+
+`src/store/auth.ts` — logout dọn sạch mọi store liên quan tại một chỗ.
+
+```ts
+reset: () => {
+  clearTokenCookie();
+  set({ ...initialState });
+  // Gọi thẳng getState() của store khác — không cần hook, không cần Provider
+  useUserStore.getState().reset();
+  useAccessStore.getState().reset();
+  useTabsStore.getState().resetTabs();
+},
+```
+
+### 11.4 AuthGuard: `allSettled` + `flushSync` chống nháy 404 (§4)
+
+`src/router/guard/auth-guard.tsx` — nạp route động rồi navigate lại để React Router match đúng.
+
+```tsx
+// allSettled: user info lỗi vẫn dựng được route (và ngược lại) — bền hơn Promise.all
+const [userRes, routesRes] = await Promise.allSettled([getUserInfo(), fetchAsyncRoutes()]);
+const roles = userRes.status === 'fulfilled' ? userRes.value.roles : [];
+const menusFromBackend = routesRes.status === 'fulfilled' ? routesRes.value.menus : [];
+const accessRoutes = routesRes.status === 'fulfilled' ? routesRes.value.accessRoutes : [];
+
+const routes = [
+  ...generateRoutesFromBackend(menusFromBackend),   // route từ menu backend
+  ...generateRoutesByFrontend(accessRoutes, roles), // hoặc lọc theo role ở FE
+];
+setAccessStore(removeDuplicateRoutes(routes));      // patch vào router động
+
+// Route vừa thêm chưa match → address bar vẫn là /system/user nhưng khớp fallback "*".
+// Navigate lại với flushSync để React Router match đúng, KHÔNG chớp trang 404.
+navigate(`${pathname}${search}`, { replace: true, flushSync: true });
+```
+
+### 11.5 Multi-tab keep-alive: Map + persist tự serialize (§5)
+
+`src/store/tabs.ts` — `Map` giữ thứ tự tab; vì JSON không encode được Map nên phải **tự serialize** trong `storage`.
+
+```ts
+const initialState = { openTabs: new Map<string, TabStateType>(), activeKey: "" };
+
+// Thêm tab: clone Map để giữ tính bất biến (immutable), set theo key O(1)
+addTab: (path, tab) => set((state) => {
+  const next = new Map(state.openTabs);
+  next.set(path, { ...next.get(path), ...tab }); // đã có → merge, chưa có → thêm
+  return { openTabs: next };
+}),
+
+// persist: Map <-> Array khi lưu/đọc sessionStorage
+storage: {
+  getItem: (name) => {
+    const saved = JSON.parse(sessionStorage.getItem(name) ?? "null");
+    if (!saved) return null;
+    saved.state.openTabs = new Map(saved.state.openTabs); // Array -> Map
+    return saved;
+  },
+  setItem: (name, value) => sessionStorage.setItem(name, JSON.stringify({
+    ...value,
+    state: { ...value.state, openTabs: [...value.state.openTabs.entries()] }, // Map -> Array
+  })),
+  removeItem: name => sessionStorage.removeItem(name),
+},
+```
+
+> Component tab ẩn được giữ sống bằng `keepalive-for-react` (ở `layout-content`), nên chuyển tab không mất scroll/filter.
+
+### 11.6 SignalR: reconnect + re-subscribe qua ref (§6)
+
+`src/api/hmi/signalr.ts` + `HmiRealtimeProvider.tsx` — kỹ thuật quan trọng nhất: **giữ tập tag trong `ref` để tự đăng ký lại sau reconnect**, và giữ callback ổn định để status nhấp nháy không reload SVG.
+
+```ts
+// Kết nối: token lấy mới mỗi lần, backoff reconnect tăng dần
+new HubConnectionBuilder()
+  .withUrl(HUB_URL, { accessTokenFactory: () => useAuthStore.getState().accessToken || "" })
+  .withAutomaticReconnect([0, 2000, 5000, 10000, 30000]) // ngay, 2s, 5s, 10s, 30s
+  .build();
+```
+
+```tsx
+const subscribedRef = useRef<Set<string>>(new Set());   // tag đang theo dõi
+const statusRef = useRef(status); statusRef.current = status; // đọc status mới, giữ hàm cũ
+
+conn.onreconnected(async () => {
+  setStatus("connected");
+  const tags = [...subscribedRef.current];
+  if (tags.length) await subscribeTags(conn, tags); // ĐĂNG KÝ LẠI — nếu thiếu, reconnect xong vẫn không có data
+});
+
+// deps rỗng → callback KHÔNG đổi identity khi status đổi → diagram không reload SVG lúc kết nối chập chờn
+const subscribe = useCallback(async (tags: string[]) => {
+  tags.forEach(t => subscribedRef.current.add(t));
+  if (statusRef.current === "connected") await subscribeTags(connRef.current!, tags);
+}, []);
+```
+
+### 11.7 ECharts: `option` trong `useMemo` + theme dark/light (§7)
+
+`src/containers/can-management/components/can-total-chart-modal.tsx` — chỉ dựng lại option khi **data hoặc theme** đổi, màu đọc từ palette theo `isDark`.
+
+```tsx
+const { isDark } = usePreferences();
+
+const option = useMemo((): EChartsOption => ({
+  tooltip: { trigger: "axis", formatter: p => `${p[0].name}: <b>${formatCanSlotValue(p[0].value)}</b>` },
+  xAxis: { type: "category", data: slotLabels,
+    axisLabel: { color: isDark ? palette.dark.text : palette.light.text } },
+  yAxis: { type: "value",
+    axisLabel: { formatter: v => formatCanSlotValue(v) } },
+  series: [{ type: "line", data, smooth: true, areaStyle: { opacity: 0.3 } }],
+}), [row, slotLabels, isDark, data]);  // deps: data + theme → không dựng lại vô ích
+
+return <ReactECharts option={option} />;
+```
+
+---
+
 ## Bảng tra nhanh — kỹ thuật ↔ file thật (để mở ra xem khi ôn)
 
 | Kỹ thuật | File | Điểm nhấn |

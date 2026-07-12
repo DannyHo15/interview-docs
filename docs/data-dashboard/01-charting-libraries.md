@@ -115,4 +115,80 @@ JD ghi rõ 4 loại chart: **time-series, bar, pie, heatmap**. Người phỏng 
 
 ---
 
+## 6. Code mẫu tối thiểu — thủ sẵn cho vòng live-code 🔥
+
+Nếu có bài live-code ("vẽ 1 line chart từ mảng data"), thủ sẵn 3 đoạn này để gõ ra trong 1 phút. Cùng 1 bộ data cho dễ so sánh.
+
+```ts
+const data = [
+  { month: 'T1', value: 400 },
+  { month: 'T2', value: 650 },
+  { month: 'T3', value: 520 },
+];
+```
+
+**Recharts** — khai báo bằng JSX, `ResponsiveContainer` lo responsive:
+
+```tsx
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={data}>
+    <XAxis dataKey="month" />
+    <YAxis />
+    <Tooltip />
+    <Line type="monotone" dataKey="value" stroke="#4f46e5" />
+  </LineChart>
+</ResponsiveContainer>
+```
+
+**ECharts** — mô tả bằng object `option`; trong React giữ instance qua `useRef`, cập nhật bằng `setOption` (không để React re-render toàn chart):
+
+```tsx
+import ReactECharts from 'echarts-for-react';
+
+const option = {
+  tooltip: { trigger: 'axis' },
+  xAxis: { type: 'category', data: data.map(d => d.month) },
+  yAxis: { type: 'value' },
+  series: [{ type: 'line', smooth: true, data: data.map(d => d.value) }],
+};
+
+<ReactECharts option={option} style={{ height: 300 }} />
+```
+
+> ⚠️ Nhớ nhắc: bundle ECharts lớn → import lẻ để tree-shake (`echarts/core` + `echarts/charts` + `echarts/components`), đừng `import * as echarts`.
+
+**D3** — không có chart sẵn, tự tính scale rồi vẽ. Cách "senior" trong React: **dùng D3 để tính, render bằng JSX** (không để D3 đụng DOM, tránh xung đột React):
+
+```tsx
+import { scaleBand, scaleLinear, max } from 'd3';
+
+const w = 300, h = 200;
+const x = scaleBand().domain(data.map(d => d.month)).range([0, w]).padding(0.2);
+const y = scaleLinear().domain([0, max(data, d => d.value)!]).range([h, 0]);
+
+<svg width={w} height={h}>
+  {data.map(d => (
+    <rect key={d.month} x={x(d.month)} y={y(d.value)}
+      width={x.bandwidth()} height={h - y(d.value)} fill="#4f46e5" />
+  ))}
+</svg>
+```
+
+> 🎯 Câu chốt ghi điểm: *"D3 là toolkit scale/shape, không phải thư viện chart. Em thường chỉ mượn `d3-scale`/`d3-shape` để tính, còn render giao cho React — tránh D3 và React tranh nhau điều khiển DOM."*
+
+---
+
+## 7. Còn Chart.js & visx thì sao? (phủ chữ "v.v." trong JD)
+
+Nếu bị hỏi ngoài 3 cái chính:
+
+- **Chart.js** — canvas, config đơn giản, rất nhẹ. Hợp trang tĩnh / dashboard nhỏ, **không phải React-first** (React chỉ có wrapper `react-chartjs-2`). So với ECharts thì ít loại chart và ít tùy biến hơn.
+- **visx** (Airbnb) — chính là hướng "D3 tính, React vẽ" được đóng gói thành primitives (`@visx/scale`, `@visx/shape`...). Chọn khi cần **custom sâu trong hệ React** mà không muốn tự viết mọi thứ từ D3 thuần. Đường học cao hơn Recharts.
+
+> Cách trả lời gọn khi bị hỏi "sao không dùng X?": *"Nguyên tắc của em là leo thang — Recharts cho chart chuẩn trong React, ECharts cho dashboard nặng/nhiều loại, chỉ xuống visx/D3 khi cần visual không có sẵn. Chọn tầng thấp nhất mà giải quyết được bài toán."*
+
+---
+
 🔗 [Về index Data Dashboard](./index.md) · [Tiếp: 02 — Large Datasets](./02-large-datasets.md)

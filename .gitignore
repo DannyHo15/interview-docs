@@ -22,3 +22,4 @@ yarn-error.log*
 .omc/sessions
 .commandcode/taste
 .omc
+docs/superpowers/specs
