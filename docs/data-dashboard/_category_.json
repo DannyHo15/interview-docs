@@ -1,0 +1,8 @@
+{
+  "label": "Data Dashboard",
+  "position": 9,
+  "link": {
+    "type": "generated-index",
+    "description": "Chiều sâu kỹ thuật cho role dashboard viễn thông (CPE/Wi-Fi/network/QoE): thư viện vẽ biểu đồ, xử lý dataset lớn ở trình duyệt, và SQL cho dashboard."
+  }
+}

@@ -63,6 +63,7 @@ const config: Config = {
         { to: "/docs/react-native", label: "React Native", position: "left" },
         { to: "/docs/system-design", label: "System Design", position: "left" },
         { to: "/docs/frontend-system-design", label: "FE System Design", position: "left" },
+        { to: "/docs/data-dashboard", label: "Data Dashboard", position: "left" },
         { to: "/docs/devops", label: "DevOps", position: "left" },
         { to: "/docs/behavioral", label: "Behavioral", position: "left" },
         { to: "/docs/cv/cv-deep-dive", label: "CV", position: "left" },
