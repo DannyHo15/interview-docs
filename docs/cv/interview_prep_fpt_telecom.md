@@ -3,6 +3,8 @@
 
 > **Về role:** Đây là vị trí Front-End **thuần** (không phải full-stack), tập trung vào một việc cụ thể: **xây dashboard giám sát hạ tầng viễn thông** (CPE, Wi-Fi, network, QoE). Đơn vị quản lý là **Trung tâm Phát triển & Quản lý Hạ tầng Miền Nam (INFMN)** — nơi vận hành mạng lưới hạ tầng phía Nam của FPT Telecom. Bạn đang apply vào đội **build các công cụ nội bộ để vận hành/monitor mạng**.
 
+> 📚 **File này là phần chiến lược (pitch + domain + cách trả lời).** Phần chiều sâu kỹ thuật cho 3 trụ cột JD (thư viện chart · dataset lớn · SQL) nằm ở bộ [`data-dashboard/`](../data-dashboard/index.md). Còn kỹ thuật thực tế rút từ chính dự án bằng chứng EVN GENCO3 (RBAC, keep-alive, SignalR, request client, ECharts...) nằm ở [`evn-genco3-techniques.md`](./evn-genco3-techniques.md) — đọc để có câu chuyện thật khi bị đào sâu.
+
 ---
 
 ## 0. Đọc JD đúng trọng tâm — đừng trả lời lan man
