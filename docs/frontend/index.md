@@ -17,7 +17,8 @@ frontend/
 ├── 04-typescript.md           ← type vs interface, generics, utility, discriminated unions…
 ├── 05-styling-css.md          ← CSS layers, Tailwind, CSS-in-JS, layout, responsive…
 ├── 06-browser-network.md      ← event loop, storage, CORS, WebSocket, security, rendering…
-└── 07-accessibility-testing.md ← a11y, ARIA, testing-library, Vitest/Jest, Playwright…
+├── 07-accessibility-testing.md ← a11y, ARIA, testing-library, Vitest/Jest, Playwright…
+└── 08-data-fetching.md        ← dedupe, optimistic update, streaming UI, SWR, smart polling…
 ```
 
 ---
@@ -84,6 +85,13 @@ frontend/
 - **Vitest/Jest** mock?
 - **Playwright/Cypress** E2E?
 - TDD ở frontend thực tế thế nào?
+
+### 🔄 8. Data Fetching Patterns — [`08-data-fetching.md`](./08-data-fetching.md)
+- **Request deduplication** (in-flight cache)? 🔥
+- **Optimistic update** + rollback? 🔥
+- **Streaming UI** (SSR Suspense + AI token stream)? 🔥
+- **Stale-While-Revalidate** (`staleTime` vs `gcTime`)? 🔥
+- **Smart polling** (visibility + backoff)?
 
 ---
 

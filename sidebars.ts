@@ -45,6 +45,7 @@ const sidebars: SidebarsConfig = {
         'frontend/styling-css',
         'frontend/browser-network',
         'frontend/accessibility-testing',
+        'frontend/data-fetching',
       ],
     },
   ],
@@ -165,7 +166,20 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'CV & Phỏng vấn',
-      items: ['cv/cv-deep-dive', 'cv/alphasphere-fullstack', 'cv/interview_prep_optisigns_vi', 'cv/cmc-global-ai-solution', 'cv/interview_prep_fpt_telecom'],
+      items: ['cv/cv-deep-dive', 'cv/alphasphere-fullstack', 'cv/interview_prep_optisigns_vi', 'cv/cmc-global-ai-solution', 'cv/interview_prep_fpt_telecom', 'cv/evn-genco3-techniques'],
+    },
+  ],
+
+  dataDashboardSidebar: [
+    {
+      type: 'category',
+      label: 'Data Dashboard',
+      link: {type: 'doc', id: 'data-dashboard/index'},
+      items: [
+        'data-dashboard/charting-libraries',
+        'data-dashboard/large-datasets',
+        'data-dashboard/sql-for-dashboards',
+      ],
     },
   ],
 
