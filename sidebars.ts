@@ -166,7 +166,18 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'CV & Phỏng vấn',
-      items: ['cv/cv-deep-dive', 'cv/alphasphere-fullstack', 'cv/interview_prep_optisigns_vi', 'cv/cmc-global-ai-solution', 'cv/interview_prep_fpt_telecom', 'cv/interview_prep_vnggames', 'cv/evn-genco3-techniques'],
+      items: [
+        'cv/cv-deep-dive',
+        'cv/alphasphere-fullstack',
+        'cv/interview_prep_optisigns_vi',
+        'cv/cmc-global-ai-solution',
+        'cv/interview_prep_fpt_telecom',
+        'cv/interview_prep_vnggames',
+        'cv/evn-genco3-techniques',
+        'cv/project-inspectai',
+        'cv/project-gencodify',
+        'cv/project-ai-communication',
+      ],
     },
   ],
 
