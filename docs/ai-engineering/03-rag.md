@@ -48,6 +48,66 @@
 - **Semantic chunking** không cho size cố định — phải có fallback để chunk không quá lớn cho context window.
 - **Late chunking** giữ được "vị trí trong tài liệu" mà chunk lẻ thiếu, nhưng cần embedding model hỗ trợ context dài (vd Jina v3).
 
+**Ví dụ minh họa — cùng một tài liệu, ba kiểu cắt:**
+
+Giả sử có tài liệu chính sách ngắn:
+
+```markdown
+# Chính sách đổi trả
+Khách được đổi trả trong vòng 30 ngày kể từ ngày nhận hàng.
+Sản phẩm phải còn nguyên tem và hóa đơn.
+
+# Phí vận chuyển
+Đơn trên 500k được miễn phí ship.
+Đơn dưới 500k tính phí 30k toàn quốc.
+```
+
+**(a) Fixed-size** (cắt cứng ~60 ký tự, không quan tâm nghĩa):
+
+```text
+Chunk 1: "# Chính sách đổi trả\nKhách được đổi trả trong vòng 30 ngày kể từ"
+Chunk 2: " ngày nhận hàng.\nSản phẩm phải còn nguyên tem và hóa đơn.\n\n# Phí"
+Chunk 3: " vận chuyển\nĐơn trên 500k được miễn phí ship.\nĐơn dưới 500k tính..."
+```
+
+→ Hỏng: "30 ngày kể từ **ngày nhận hàng**" bị cắt đôi giữa chunk 1 và 2; chunk 2 trộn cả hai chủ đề (đổi trả + phí ship). Hỏi *"đơn 400k phí ship bao nhiêu?"* dễ match nhầm chunk 2.
+
+**(b) Structure-aware** (mỗi heading = 1 chunk):
+
+```text
+Chunk 1  (metadata: heading="Chính sách đổi trả"):
+  "Khách được đổi trả trong vòng 30 ngày kể từ ngày nhận hàng.
+   Sản phẩm phải còn nguyên tem và hóa đơn."
+
+Chunk 2  (metadata: heading="Phí vận chuyển"):
+  "Đơn trên 500k được miễn phí ship. Đơn dưới 500k tính phí 30k toàn quốc."
+```
+
+→ Mỗi chunk trọn **một ý**, kèm metadata heading để lọc và trích nguồn. Hỏi phí ship → trúng thẳng chunk 2. Đây thường là kết quả retrieval tốt nhất cho docs có cấu trúc.
+
+**(c) Semantic** (đo similarity giữa các câu, cắt khi chủ đề đổi): "tem/hóa đơn" gần nghĩa "đổi trả" nên gom chung; tới câu "miễn phí ship" thì similarity **tụt** → cắt. Kết quả gần giống (b) nhưng **không cần** tài liệu có sẵn heading — đổi lại tốn compute để embed từng câu.
+
+**Ví dụ vì sao cần overlap:**
+
+Đoạn gốc: *"…Bảo hành 12 tháng. Không áp dụng cho lỗi do người dùng như rơi vỡ, vào nước."*
+
+```text
+KHÔNG overlap:
+  Chunk A: [... Bảo hành 12 tháng.]
+  Chunk B: [Không áp dụng cho lỗi do người dùng như rơi vỡ, vào nước.]
+
+CÓ overlap (lặp lại câu cuối của A ở đầu B):
+  Chunk A: [... Bảo hành 12 tháng.]
+  Chunk B: [Bảo hành 12 tháng. Không áp dụng cho lỗi do người dùng như rơi vỡ...]
+```
+
+→ Hỏi *"rơi vỡ có được bảo hành không?"*: bản không overlap retrieve chunk B nhưng **mất chủ ngữ "bảo hành"** → model dễ trả lời cụt/sai. Overlap kéo câu "Bảo hành 12 tháng." sang B → giữ liên kết ngữ nghĩa.
+
+**Ví dụ parent-child (small-to-big):**
+
+- **Index** bằng câu nhỏ để match chính xác: câu *"Đơn dưới 500k tính phí 30k toàn quốc."* trúng thẳng câu hỏi *"ship đơn 300k bao nhiêu?"*.
+- **Trả cho LLM** cả **mục cha "Phí vận chuyển"** (gồm cả điều kiện miễn phí trên 500k) → câu trả lời đủ ngữ cảnh, không thiếu vế. Nhỏ để tìm, to để trả lời.
+
 **Mẹo khi chọn:**
 
 - Không có cách "đúng nhất" — chọn theo dữ liệu + bài toán. Bắt đầu recursive → đo recall → mới optimize.
