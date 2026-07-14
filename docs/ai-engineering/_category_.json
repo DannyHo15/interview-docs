@@ -1,0 +1,8 @@
+{
+  "label": "AI Engineering",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "Nền tảng phỏng vấn cho role AI Engineer / AI Solution / LLM App: cách LLM hoạt động, prompt engineering, RAG, agent & tool calling, và đưa AI lên production (đánh giá, guardrail, chi phí)."
+  }
+}
