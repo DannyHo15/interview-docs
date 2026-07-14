@@ -216,6 +216,11 @@ const sidebars: SidebarsConfig = {
       items: [
         'case-studies/upload-large-csv',
         'case-studies/bulk-insert-db',
+        'case-studies/realtime-updates',
+        'case-studies/deep-pagination',
+        'case-studies/idempotent-api',
+        'case-studies/cache-invalidation-stampede',
+        'case-studies/presigned-url-upload',
       ],
     },
   ],
