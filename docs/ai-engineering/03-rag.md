@@ -32,10 +32,34 @@
 - **Ngắt theo cấu trúc** tốt hơn ngắt theo độ dài cứng: theo đoạn văn, theo heading Markdown, theo mục — giữ trọn ý.
 - Lưu kèm **metadata** (nguồn, tiêu đề, trang, ngày) để lọc và trích dẫn.
 
+**Các cách chunking phổ biến:**
+
+| Cách | Size ổn định? | Giữ ngữ nghĩa? | Chi phí | Khi nào dùng |
+|---|---|---|---|---|
+| **Fixed-size** (cắt cố định N token/ký tự) | ✅ | ❌ | Rẻ | Baseline, văn bản đồng nhất |
+| **Recursive** (đa tầng separator `\n\n` → `\n` → `. ` → space) | ✅ | Trung bình | Rẻ | Default, đa số trường hợp; mặc định LangChain |
+| **Structure-aware** (theo heading Markdown / thẻ HTML / AST code) | ❌ | ✅ | Rẻ | Docs có cấu trúc — thường cho retrieval tốt nhất |
+| **Sentence-based** (nhóm N câu/chunk) | ✅ | Trung bình | Rẻ | FAQ, văn bản ngắn |
+| **Semantic** (embed từng câu → cắt khi similarity giảm đột ngột) | ❌ | ✅✅ | Vừa | Văn bản tự do, dài; tôn trọng ranh giới chủ đề |
+| **Late chunking** (embed cả doc bằng long-context model rồi mới cắt) | — | ✅✅ | Cao | Cần giữ context toàn cục cho từng chunk |
+| **Agentic** (LLM tự quyết chỗ cắt) | ❌ | ✅✅✅ | Đắt | PoC, dữ liệu phức tạp; hiếm dùng production |
+
+- **Fixed-size** + **overlap** là điểm khởi đầu phổ biến nhất; **recursive** và **structure-aware** thường là nâng cấp đầu tiên.
+- **Semantic chunking** không cho size cố định — phải có fallback để chunk không quá lớn cho context window.
+- **Late chunking** giữ được "vị trí trong tài liệu" mà chunk lẻ thiếu, nhưng cần embedding model hỗ trợ context dài (vd Jina v3).
+
+**Mẹo khi chọn:**
+
+- Không có cách "đúng nhất" — chọn theo dữ liệu + bài toán. Bắt đầu recursive → đo recall → mới optimize.
+- **Parent-child / small-to-big**: chunk nhỏ để match chính xác khi retrieve, nhưng **trả context lớn (parent)** cho LLM → gỡ được tradeoff chunk-size. Phổ biến trong production.
+- **Chunk size + overlap cần tune** dựa trên metric (context precision/recall), đừng đoán con số.
+
 **Bẫy thường gặp:**
 
 - Cắt cứng theo số ký tự giữa câu → chunk vô nghĩa. Ưu tiên cắt theo ranh giới ngữ nghĩa.
+- Áp semantic/late chunking cho mọi thứ ngay từ đầu — đắt và chưa cần; baseline thường đã đủ.
 - **Câu hỏi nối tiếp:** *"Chọn chunk size bằng cách nào?"* → Không có con số vàng; **thử nhiều size và đo bằng eval retrieval** (câu hỏi này lấy đúng đoạn không).
+- **Câu hỏi nối tiếp:** *"Semantic chunking khác gì recursive?"* → Recursive cắt theo **quy tắc** (separator), còn semantic cắt theo **độ đổi chủ đề** thực tế đo bằng embedding — tự nhiên hơn nhưng tốn compute và size không đều.
 
 ---
 

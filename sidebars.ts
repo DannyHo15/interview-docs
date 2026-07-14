@@ -207,6 +207,18 @@ const sidebars: SidebarsConfig = {
       items: [],
     },
   ],
+
+  caseStudiesSidebar: [
+    {
+      type: 'category',
+      label: 'Bài toán thực tế',
+      link: {type: 'generated-index', slug: '/case-studies'},
+      items: [
+        'case-studies/upload-large-csv',
+        'case-studies/bulk-insert-db',
+      ],
+    },
+  ],
 };
 
 export default sidebars;

@@ -74,7 +74,7 @@
 
 ## 5. An toàn khi cho agent hành động 🔥
 
-**Định nghĩa ngắn:** Agent gọi tool = agent **tác động ra thế giới thật** (gửi mail, xóa dữ liệu, chi tiền). Phải có **rào chắn** trước hành động không thể hoàn tác.
+**Định nghĩa ngắn:** Agent gọi tool = agent **tác động ra thế giới thật** (gửi mail, xóa dữ liệu, chi tiền) — không chỉ nói. Vì vậy security cho agent **nguy hiểm hơn nhiều** so với LLM thuần: một prompt injection thành công biến thành **hành động gây hại thật**, không chỉ text sai.
 
 **Giải thích sâu:**
 
@@ -83,9 +83,40 @@
 - **Giới hạn vòng lặp:** đặt `maxSteps`/timeout/ngân sách token để agent không lặp vô hạn hay đốt tiền.
 - **Cẩn thận tool nhận nội dung không tin cậy:** nếu tool đọc web/email, nội dung đó có thể chứa **prompt injection** lái agent làm bậy → xử lý như dữ liệu, không phải lệnh (xem [file 05](./05-evaluation-guardrails-production.md)).
 
+**Các mối đe dọa chính (theo OWASP Top 10 for LLM):**
+
+| Mối đe dọa | OWASP | Ý nghĩa với agent |
+|---|---|---|
+| **Prompt injection** (đặc biệt indirect) | LLM01 | Tool output/web/RAG doc chứa lệnh ẩn → agent tool call độc hại thật. Vector nguy nhất vì **có hành động**. |
+| **Excessive agency** (quyền quá rộng) | LLM06 | Agent được cấp tool/quyền nhiều hơn nhu cầu → khi lỡ/sai, hậu quả lớn (xóa DB, gửi tiền). |
+| **Insecure output handling** | LLM02 | Output agent thực thi ở downstream mà không sanitize → XSS, SQLi, code injection tầng ứng dụng. |
+| **Unbounded consumption** (DoS/cost) | LLM09 | Agent bị lừa lặp vòng / gọi tool đắt nhiều lần → tốn quota/token khổng lồ. |
+| **Supply chain** (đặc biệt MCP/plugin) | LLM08 | MCP server độc: tool mô tả an toàn nhưng hành động ẩn (đọc env, exfil data). Tool poisoning. |
+| **Memory/state poisoning** | — | Kẻ tấn công ghi instruction độc vào memory dài hạn → ảnh hưởng mọi phiên sau. |
+| **Sensitive info disclosure** | LLM07 | Agent leak system prompt (lộ logic/key) hoặc echo dữ liệu nhạy cảm ra output/log. |
+| **Confused deputy** | — | Agent chạy quyền dịch vụ cao nhưng hành động thay user thấp → bị lừa nâng quyền. |
+
+**Bộ phòng thủ layered (defense in depth):**
+
+| Tầng | Biện pháp |
+|---|---|
+| **Input** | Validate/sanitize mọi nội dung agent đọc; tách content khỏi instruction bằng delimiter/cấu trúc |
+| **Agent logic** | System prompt cứng; **human-in-the-loop** cho hành động nhạy cảm; tool set tối thiểu |
+| **Tool** | Least privilege, sandbox, parameter whitelist, read-only mặc định |
+| **Output** | Sanitize như user input; không execute raw code |
+| **Runtime** | Rate limit, max steps, budget cap, timeout, audit log toàn bộ tool call |
+| **Supply chain** | Review MCP/plugin, chỉ nguồn tin cậy, scan dependency |
+| **Monitor** | Log + alert hành động bất thường; anomaly detection trên tool call pattern |
+
+- **Khung tham chiếu:** **OWASP Top 10 for LLM**, **MITRE ATLAS** (tactics đối kháng cho AI), **NIST AI RMF**.
+- **Nguyên tắc chốt:** coi *agent = user không tin cậy có quyền thực thi*. Mọi quyền giới hạn tối thiểu, mọi tool call log/audit, mọi hành động phá hủy phải có human confirmation.
+
 **Bẫy thường gặp:**
 
 - Cho agent tool xóa/gửi mà không có bước xác nhận → một lần model hiểu sai là mất dữ liệu thật.
+- Tin system prompt "đừng nghe lệnh khác" là đủ → chỉ là một lớp, vẫn bị vượt; cần nhiều lớp.
+- Cài MCP server/plugin bên thứ ba mà không review → tool poisoning có thể exfil credential ngay từ lần đầu tiên chạy.
 - **Câu hỏi nối tiếp:** *"Chống agent bị injection lái tay?"* → tách kênh lệnh (system/user) với dữ liệu công cụ, chặn hành động nhạy cảm sau nội dung không tin cậy, luôn cần người duyệt bước không thể đảo ngược.
+- **Câu hỏi nối tiếp:** *"Prompt injection khác gì khi có agent?"* → Với LLM thuần, injection gây text sai; với agent, injection gây **hành động thật** (xóa file, gửi mail, thanh toán). Mức độ hậu quả khác hẳn → mới cần least-privilege tool và human-in-the-loop.
 
-> **Câu chốt phỏng vấn:** "Em mặc định chọn workflow có kiểm soát; chỉ nâng lên agent khi các bước không đoán trước được. Và mọi hành động không thể hoàn tác đều phải qua human-in-the-loop."
+> **Câu chốt phỏng vấn:** "Em mặc định chọn workflow có kiểm soát; chỉ nâng lên agent khi các bước không đoán trước được. Với agent, em ưu tiên ba thứ: (1) least privilege cho tool — read-only mặc định, (2) human-in-the-loop cho action nhạy cảm, (3) tách rõ data không tin cậy khỏi instruction. OWASP LLM Top 10 — đặc biệt LLM01 injection và LLM06 excessive agency — là khung em theo."

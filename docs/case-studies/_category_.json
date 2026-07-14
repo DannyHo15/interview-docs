@@ -1,0 +1,8 @@
+{
+  "label": "Bài toán thực tế",
+  "position": 9,
+  "link": {
+    "type": "generated-index",
+    "description": "Các case study end-to-end từ phỏng vấn thật — từ frontend tới backend tới database. Mỗi bài: đặt vấn đề → phân tích từng tầng → lời giải → trade-off."
+  }
+}

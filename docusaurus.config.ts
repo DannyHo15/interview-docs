@@ -58,21 +58,46 @@ const config: Config = {
       items: [
         { to: "/docs/study-plan", label: "📅 Study Plan", position: "left" },
         { to: "/docs/algorithms", label: "Algorithms", position: "left" },
-        { to: "/docs/backend", label: "Backend", position: "left" },
-        { to: "/docs/frontend", label: "Frontend", position: "left" },
-        { to: "/docs/react-native", label: "React Native", position: "left" },
-        { to: "/docs/system-design", label: "System Design", position: "left" },
-        { to: "/docs/frontend-system-design", label: "FE System Design", position: "left" },
-        { to: "/docs/data-dashboard", label: "Data Dashboard", position: "left" },
-        { to: "/docs/ai-engineering", label: "AI Engineering", position: "left" },
-        { to: "/docs/devops", label: "DevOps", position: "left" },
-        { to: "/docs/behavioral", label: "Behavioral", position: "left" },
-        { to: "/docs/cv/cv-deep-dive", label: "CV", position: "left" },
         {
-          to: "/docs/poc-ai-builder",
-          label: "PoC AI Builder",
+          type: "dropdown",
+          label: "Frontend",
           position: "left",
+          items: [
+            { to: "/docs/frontend", label: "Frontend" },
+            { to: "/docs/react-native", label: "React Native" },
+            { to: "/docs/frontend-system-design", label: "FE System Design" },
+          ],
         },
+        {
+          type: "dropdown",
+          label: "Backend & Systems",
+          position: "left",
+          items: [
+            { to: "/docs/backend", label: "Backend" },
+            { to: "/docs/system-design", label: "System Design" },
+            { to: "/docs/data-dashboard", label: "Data Dashboard" },
+          ],
+        },
+        {
+          type: "dropdown",
+          label: "AI & DevOps",
+          position: "left",
+          items: [
+            { to: "/docs/ai-engineering", label: "AI Engineering" },
+            { to: "/docs/devops", label: "DevOps" },
+            { to: "/docs/poc-ai-builder", label: "PoC AI Builder" },
+          ],
+        },
+        {
+          type: "dropdown",
+          label: "Career",
+          position: "left",
+          items: [
+            { to: "/docs/cv/cv-deep-dive", label: "CV" },
+            { to: "/docs/behavioral", label: "Behavioral" },
+          ],
+        },
+        { to: "/docs/case-studies", label: "Bài toán thực tế", position: "left" },
       ],
     },
     footer: {
