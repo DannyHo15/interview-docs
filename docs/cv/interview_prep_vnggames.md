@@ -102,6 +102,30 @@ Cho mỗi project: **bài toán → làm gì → tại sao → trade-off → bus
 - **Làm gì:** Load **8s→1s**; **led team 4** remediate pentest (**3 high+13 medium+8 low**) cho Flotech Singapore; offline map; Angular multi-repo→Nx monorepo.
 - **Tại sao ăn điểm:** (a) **code review/security**; (b) **leadership**; (c) **performance có số liệu**.
 
+### 3.7 🔥 "Nếu có thời gian, em sẽ nâng cấp InspectAI / AI Communication thế nào?"
+
+Câu senior-filter kinh điển. **Đừng liệt kê 10 công nghệ** — nói **thứ tự ưu tiên có lý do**, theo khung: **đo được → an toàn → rẻ + nhanh** (khớp [AI Engineering 05](../ai-engineering/05-evaluation-guardrails-production.md)).
+
+**InspectAI:**
+
+| # | Nâng cấp | Câu nói trong phỏng vấn |
+|---|---|---|
+| 1 | **Eval set** từ transcript thật (nhãn vi phạm) → đo precision/recall của flagging | "Tool compliance mà false-positive cao là user tắt notification — em cần con số trước khi chỉnh gì thêm" |
+| 2 | **Cascade 2 tầng**: model rẻ/Cloud NL sàng lọc mọi chunk, chỉ chunk khả nghi lên Gemini | "Volume real-time lớn → routing là đòn cost lớn nhất" |
+| 3 | **Redact PII** trước khi log/gửi LLM + **trace per meeting** (token/cost/latency) | "Tool giám sát mà tự rò PII qua log là chết" |
+| + | Fallback Gemini→khác (timeout+log); dài hạn: **fine-tune model nhỏ** cho tầng sàng lọc khi đủ nhãn ([07](../ai-engineering/07-fine-tuning.md) — task hẹp lặp nhiều) | |
+
+**AI Communication:**
+
+| # | Nâng cấp | Câu nói trong phỏng vấn |
+|---|---|---|
+| 1 | **Chống indirect prompt injection**: nội dung email/tin nhắn là dữ liệu KHÔNG tin cậy — đánh dấu ranh giới, không thực thi lệnh trong đó; redact PII 2 chiều | "Extension đọc email *người khác gửi tới* — một email chứa 'ignore instructions…' là bot soạn bậy dưới danh nghĩa user" |
+| 2 | **Eval multi-provider**: kịch bản compose/analyze + LLM-as-judge cho tone, chạy cả OpenAI lẫn Gemini | "Có fallback mà không eval thì không biết fallback có tụt chất lượng/lệch giọng không" |
+| 3 | **Prompt caching** phần system/few-shot tĩnh + **routing** (analyze→mini, compose→lớn) + streaming với `AbortController` khi đóng popup | "Extension = nhiều request nhỏ lặp phần tĩnh → cache ăn đậm" |
+| + | `generateObject`+Zod cho analyze; cost tracking per user → gateway-lite nếu nhiều team dùng ([06](../ai-engineering/06-streaming-multi-provider.md)) | |
+
+**Câu chốt:** *"Cả hai đều bắt đầu bằng eval — vì chưa đo thì mọi tối ưu sau đó chỉ là cảm giác."*
+
 ---
 
 ## 4. LLM engineering + AIT stack — technical prep (trọng tâm)
