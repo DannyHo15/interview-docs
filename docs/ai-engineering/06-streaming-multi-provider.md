@@ -120,4 +120,141 @@
 - Dựng gateway quá sớm cho **một** app → over-engineer. Gateway đáng làm khi có **nhiều** app dùng chung; một app thì gọi SDK trực tiếp là đủ (nguyên tắc: đơn giản nhất mà chạy được).
 - **Câu hỏi nối tiếp:** *"Gateway thành single point of failure thì sao?"* → phải HA (nhiều instance, health check), timeout/fallback, và **không** để gateway thêm latency đáng kể (mỏng, cache, gần app).
 
-> **Câu chốt phỏng vấn:** "Streaming, multi-provider, fallback và một LLM gateway mỏng là bốn thứ em coi là 'production-ready' khi tích hợp LLM: người dùng thấy phản hồi ngay, hệ không phụ thuộc một nhà cung cấp, và toàn công ty có một điểm để đo cost/chất lượng và áp guardrail."
+---
+
+## 7. Case thực tế — render stream text trên Frontend cho tối ưu 🔥
+
+**Định nghĩa ngắn:** Mục 1–6 lo *server đẩy token*; mục này lo *FE nhận và vẽ token*. Bài toán FE: token về **rất dày** (hàng chục–trăm chunk/giây), nếu mỗi token trigger một lần **re-render + re-parse markdown** thì UI **giật/đơ**, quạt CPU kêu, cuộn nhảy loạn. Tối ưu = vẽ *cảm giác mượt* mà không vẽ *mọi token*.
+
+**Giải thích sâu (các đòn tối ưu, từ ăn tiền nhất → phụ):**
+
+1. **Batch token theo frame (rAF), đừng setState mỗi token.** Gom token vào một `buffer` ngoài React, mỗi `requestAnimationFrame` mới flush một lần vào state. Màn hình chỉ 60fps → vẽ hơn 60 lần/giây là phí. Đây là đòn giảm re-render mạnh nhất.
+
+   ```tsx
+   function useStreamedText(stream: AsyncIterable<string>) {
+     const [text, setText] = useState("");
+     useEffect(() => {
+       let buffer = "";
+       let raf = 0;
+       const flush = () => { setText(buffer); raf = 0; };
+       (async () => {
+         for await (const chunk of stream) {
+           buffer += chunk;
+           // ponytail: gộp mọi token trong 1 frame; không cần throttle lib
+           if (!raf) raf = requestAnimationFrame(flush);
+         }
+         flush(); // đảm bảo vẽ nốt phần cuối
+       })();
+       return () => raf && cancelAnimationFrame(raf);
+     }, [stream]);
+     return text;
+   }
+   ```
+
+2. **Đọc SSE thành `AsyncIterable` để feed cho hook trên.** Đây là mảnh nối server↔hook: đọc `response.body` (ReadableStream), decode, **buffer tới ranh giới `\n\n`** rồi mới yield từng chunk (nối lại mục 3.1 — chunk có thể tới cắt ngang).
+
+   ```tsx
+   async function* readSSE(res: Response, signal: AbortSignal) {
+     const reader = res.body!.getReader();
+     const decoder = new TextDecoder();
+     let buffer = "";
+     while (true) {
+       if (signal.aborted) { await reader.cancel(); return; }
+       const { done, value } = await reader.read();
+       if (done) break;
+       buffer += decoder.decode(value, { stream: true });
+       // chỉ cắt khi đủ ranh giới; phần dở giữ lại chờ chunk sau
+       const parts = buffer.split("\n\n");
+       buffer = parts.pop() ?? "";
+       for (const part of parts) {
+         const line = part.replace(/^data: /, "");
+         if (line === "[DONE]") return;
+         yield JSON.parse(line).delta as string; // tuỳ format provider
+       }
+     }
+   }
+   ```
+
+3. **Đừng parse lại markdown cả bài mỗi lần.** Markdown→HTML tốn CPU và **tăng tuyến tính theo độ dài** — càng về cuối càng chậm (O(n) mỗi lần × n lần = O(n²)). Cách xử lý: tách bài thành block, các block đã “đóng” (có ranh giới `\n\n` phía sau) **memo hóa** không parse lại, chỉ block cuối đang chảy mới parse mỗi frame.
+
+   ```tsx
+   import { memo } from "react";
+   import ReactMarkdown from "react-markdown";
+
+   // block đã đóng: chỉ re-render khi source đổi (gần như không bao giờ) → parse 1 lần
+   const Block = memo(({ md }: { md: string }) => <ReactMarkdown>{md}</ReactMarkdown>);
+
+   function StreamedMarkdown({ text }: { text: string }) {
+     const blocks = text.split("\n\n");
+     return (
+       <>
+         {blocks.map((md, i) => (
+           <Block key={i} md={md} /> // block cuối đổi mỗi frame, các block trên hit memo
+         ))}
+       </>
+     );
+   }
+   ```
+
+4. **Auto-scroll “dính đáy” đúng cách.** Chỉ tự cuộn xuống khi user *đang ở đáy*; nếu user cuộn lên đọc lại thì **không** giật họ xuống.
+
+   ```tsx
+   function useStickToBottom(ref: RefObject<HTMLElement>, dep: unknown) {
+     const stick = useRef(true);
+     useEffect(() => {
+       const el = ref.current;
+       if (!el) return;
+       const onScroll = () => {
+         stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+       };
+       el.addEventListener("scroll", onScroll);
+       return () => el.removeEventListener("scroll", onScroll);
+     }, [ref]);
+     useEffect(() => {
+       if (stick.current) ref.current?.scrollTo({ top: ref.current.scrollHeight });
+     }, [dep, ref]); // dep = text; chạy lại mỗi lần text đổi
+   }
+   ```
+
+5. **Không giữ mảng token trong state.** Nối vào **một string tích luỹ** (như `buffer` ở đòn 1), không `setTokens([...tokens, t])` (mỗi lần copy cả mảng → O(n²) bộ nhớ + render). Text là append-only, string là đủ.
+
+6. **Cleanup + abort khi unmount** (nối tiếp mục 3.2): rời trang/gửi câu mới → `AbortController.abort()` + `cancelAnimationFrame`, tránh setState trên component đã gỡ và tránh đốt token. Ráp cả cụm lại:
+
+   ```tsx
+   function ChatAnswer({ prompt }: { prompt: string }) {
+     const [stream, setStream] = useState<AsyncIterable<string> | null>(null);
+     const boxRef = useRef<HTMLDivElement>(null);
+     useEffect(() => {
+       const ctrl = new AbortController();
+       fetch("/api/chat", {
+         method: "POST",
+         body: JSON.stringify({ prompt }),
+         signal: ctrl.signal,
+       }).then((res) => setStream(readSSE(res, ctrl.signal)));
+       return () => ctrl.abort(); // unmount/prompt đổi → hủy request + reader
+     }, [prompt]);
+
+     const text = useStreamedText(stream);      // đòn 1: batch theo rAF
+     useStickToBottom(boxRef, text);            // đòn 4
+     return (
+       <div ref={boxRef} style={{ overflowY: "auto" }}>
+         <StreamedMarkdown text={text} />       {/* đòn 3: memo block đã đóng */}
+       </div>
+     );
+   }
+   ```
+
+   > `useStreamedText` cần nhận `stream` nullable — thêm `if (!stream) return;` ở đầu `useEffect` của nó.
+
+7. **Hiệu ứng “gõ chữ” (typewriter) là tùy chọn, không bắt buộc.** Nếu muốn mượt hơn tốc độ token thật, đệm token vào queue rồi nhả đều theo interval — nhưng cân nhắc: nó **thêm độ trễ cảm nhận**. Thường token tự nhiên đã đủ mượt, đừng thêm phức tạp khi chưa cần.
+
+**Bẫy thường gặp:**
+
+- `setText(prev => prev + chunk)` **mỗi token** trong `for await` → mỗi chunk một re-render, list dài là tụt frame ngay. Phải batch (đòn 1).
+- Re-parse toàn bộ markdown mỗi frame trên câu trả lời dài → về cuối stream thấy **chậm dần đều**, dấu hiệu kinh điển của O(n²) parse.
+- Auto-scroll vô điều kiện → user không đọc lại được đoạn trên vì bị kéo xuống liên tục.
+- **Câu hỏi nối tiếp:** *"Nếu dùng Vercel AI SDK thì còn phải tự lo mấy cái này không?"* → `useChat`/`useCompletion` đã lo batching, abort, accumulate string cho bạn; phần **còn phải tự làm** thường là *auto-scroll dính đáy* và *tối ưu render markdown* (memo block đã đóng) — hai thứ SDK không quyết hộ vì thuộc về UI.
+
+---
+
+> **Câu chốt phỏng vấn:** "Streaming, multi-provider, fallback và một LLM gateway mỏng là bốn thứ em coi là 'production-ready' khi tích hợp LLM: người dùng thấy phản hồi ngay, hệ không phụ thuộc một nhà cung cấp, và toàn công ty có một điểm để đo cost/chất lượng và áp guardrail. Về phía FE, em batch token theo animation frame và chỉ re-parse block markdown cuối để giữ UI mượt kể cả câu trả lời dài."
