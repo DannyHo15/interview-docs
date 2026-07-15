@@ -245,12 +245,22 @@ LIMIT 5;
 
 ## 5. Nâng chất lượng retrieval — hybrid, rerank & query 🔥
 
-**Định nghĩa ngắn:** Vector search giỏi ngữ nghĩa nhưng **dở với từ khóa chính xác** (mã sản phẩm, tên riêng, số hiệu). Ba đòn nâng chất lượng: **hybrid** (ghép vector + keyword), **rerank** (xếp lại cho đúng), **query transformation** (sửa câu hỏi trước khi search).
+**Vấn đề:** vector search "hiểu ý" nhưng có 3 chỗ hay hụt. Mỗi kỹ thuật dưới chữa đúng **một** chỗ:
 
-**① Hybrid search:**
+| Triệu chứng | Chữa bằng |
+|---|---|
+| Hỏi đúng **mã/tên riêng** ("lỗi E-503", "gói VIP-2024") mà không ra | ① Hybrid |
+| Đoạn đúng **có** trong top-50 nhưng bị xếp thấp, rớt khỏi top-5 | ② Rerank |
+| **Câu hỏi** quá ngắn/mơ hồ nên embed ra vector "lệch" | ③ Query transformation |
 
-- Chạy song song **vector** (nghĩa) + **keyword/BM25** (từ khóa), rồi **hợp nhất** kết quả — thường bằng **RRF (Reciprocal Rank Fusion)** như trong PoC. Bắt được cả "ý gần nghĩa" lẫn "trùng mã chính xác".
-- **RRF hoạt động sao?** Mỗi tài liệu nhận điểm theo **thứ hạng** ở từng danh sách (`1/(k+rank)`), cộng lại. Ưu điểm: không cần chuẩn hóa điểm số khác thang giữa hai hệ.
+### ① Hybrid — ghép "hiểu ý" với "khớp chữ"
+
+Vector giỏi nghĩa nhưng **dốt từ khóa chính xác**: mã sản phẩm, tên riêng, số hiệu không mang "nghĩa" để embed → hỏi đúng "E-503" nhiều khi không ra. Cách chữa: chạy **song song hai kiểu tìm** rồi trộn:
+
+- **Vector** — bắt *ý gần nghĩa*: hỏi "xe ít hao xăng" ra được "ô tô tiết kiệm nhiên liệu".
+- **Keyword (BM25)** — bắt *trùng chữ chính xác*: hỏi "E-503" ra đúng đoạn có "E-503". BM25 là kiểu tìm theo tần suất từ khóa, cổ điển như Elasticsearch/Google ngày xưa.
+
+**Trộn hai danh sách kiểu gì?** Hai hệ cho điểm **khác thang** (cosine 0–1 vs BM25 điểm tùy ý) nên không cộng thẳng được. Mẹo **RRF (Reciprocal Rank Fusion)**: **quên điểm gốc, chỉ nhìn thứ hạng.** Đoạn hạng 1 ở một danh sách được `1/(60+1)`, hạng 2 được `1/(60+2)`… rồi **cộng điểm của nó ở cả hai danh sách**. Đoạn nào lọt top ở *cả hai* → tổng cao nhất → lên đầu.
 
 ```ts
 // Gộp nhiều danh sách xếp hạng (vd [vectorIds, keywordIds]) thành 1 điểm chung
@@ -265,18 +275,23 @@ function reciprocalRankFusion(rankings: string[][], k = 60): Map<string, number>
 }
 ```
 
-**② Reranking:**
+*Ví dụ:* hỏi "gói VIP-2024 có ưu đãi gì" → vector kéo các đoạn nói "ưu đãi/khuyến mãi", keyword kéo đúng đoạn chứa "VIP-2024"; RRF đẩy đoạn **vừa trúng nghĩa vừa trúng mã** lên top.
 
-- Lấy top ~50 ứng viên rồi cho một **cross-encoder** (model chuyên chấm độ liên quan câu hỏi–đoạn) xếp lại, giữ top ~5 đưa vào LLM. Chính xác hơn nhiều so với chỉ cosine, đổi lại thêm latency/cost.
-- Trình tự thực dụng: **retrieve rộng (recall cao) → rerank hẹp (precision cao) → generate**.
+### ② Rerank — xếp lại cho đúng
 
-**③ Query transformation — sửa câu hỏi trước khi search:**
+Lúc retrieve ta lấy **rộng cho chắc** (vd top-50) để đừng bỏ sót. Nhưng không thể nhét 50 đoạn vào LLM (tốn token + nhiễu) → chỉ muốn **~5 đoạn đúng nhất**. Rắc rối: cosine xếp hạng khá thô, đoạn đúng nhất có khi nằm tận hạng 12.
 
-Câu hỏi người dùng thường ngắn, mơ hồ, hoặc dùng từ khác tài liệu → retrieve kém dù kho tốt. Biến đổi query trước:
+**Reranker** là một model đọc **cặp (câu hỏi, đoạn) cùng lúc** rồi chấm độ liên quan — tinh hơn cosine nhiều (cosine embed câu hỏi và đoạn *riêng rẽ* rồi mới so, nên thô hơn). Đổi lại reranker **chậm/đắt**, vì vậy chỉ chấm ~50 ứng viên chứ không chấm cả kho.
 
-- **Query rewriting:** LLM viết lại câu hỏi rõ ràng hơn, hoặc tách câu hỏi nhiều phần thành các câu con.
-- **Multi-query:** sinh vài biến thể của câu hỏi, retrieve tất cả rồi gộp → **tăng recall** khi cách diễn đạt lệch nhau.
-- **HyDE** (Hypothetical Document Embeddings): cho LLM viết một **câu trả lời giả định**, rồi embed *câu trả lời đó* để search (thay vì embed câu hỏi) — vì một "đoạn trả lời" nằm gần tài liệu hơn một "câu hỏi".
+→ Trình tự chuẩn: **retrieve rộng (top-50, recall cao) → rerank → giữ top-5 (precision cao) → generate.**
+
+### ③ Query transformation — sửa câu hỏi trước khi search
+
+Đôi khi kho tốt mà vẫn trượt vì **câu hỏi tệ**: quá ngắn, mơ hồ, hoặc dùng từ khác tài liệu. Sửa *câu hỏi* trước khi đem đi search:
+
+- **Query rewriting** — LLM viết lại rõ hơn / tách câu 2 ý thành 2 câu. Vd "nó bảo hành ko" → "Sản phẩm X có được bảo hành không? Thời hạn bao lâu?".
+- **Multi-query** — sinh 3–4 cách hỏi khác nhau, search cả, gộp kết quả → tăng khả năng trúng khi tài liệu diễn đạt kiểu khác.
+- **HyDE** — cho LLM **bịa một câu trả lời mẫu** trước, rồi embed *câu trả lời đó* (không phải câu hỏi) để search. Lý do: một đoạn trả lời trông giống tài liệu hơn một câu hỏi, nên vector gần đoạn đúng hơn. (Câu bịa có sai cũng không sao — ta chỉ dùng nó để *tìm*, không đưa cho user.)
 
 **Bẫy thường gặp:**
 
