@@ -107,4 +107,4 @@
 **Bẫy thường gặp:**
 
 - Trả lời "cần model biết dữ liệu công ty → fine-tune" là **sai hướng** trong đa số case → nên RAG.
-- **Câu hỏi nối tiếp:** *"Khi nào bắt buộc fine-tune?"* → Khi cần format rất đặc thù, latency cực thấp, hoặc domain ngôn ngữ mà prompting/RAG không đủ.
+- **Câu hỏi nối tiếp:** *"Khi nào bắt buộc fine-tune?"* → Khi cần format rất đặc thù, latency cực thấp, hoặc domain ngôn ngữ mà prompting/RAG không đủ. Đào sâu ở [07 — Fine-tuning](./07-fine-tuning.md).

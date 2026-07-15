@@ -206,6 +206,7 @@ const sidebars: SidebarsConfig = {
         'ai-engineering/agents-tool-calling',
         'ai-engineering/evaluation-guardrails-production',
         'ai-engineering/streaming-multi-provider',
+        'ai-engineering/fine-tuning',
       ],
     },
   ],

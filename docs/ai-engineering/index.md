@@ -4,7 +4,7 @@
 
 ## Bối cảnh
 
-Khác với backend/frontend truyền thống, phỏng vấn AI Engineer xoay quanh việc **ghép LLM vào sản phẩm thật**: không phải train model, mà là **dùng model của người khác một cách đúng, an toàn, rẻ và đo được**. Có **6 trụ cột** gần như chắc chắn bị hỏi:
+Khác với backend/frontend truyền thống, phỏng vấn AI Engineer xoay quanh việc **ghép LLM vào sản phẩm thật**: không phải train model, mà là **dùng model của người khác một cách đúng, an toàn, rẻ và đo được**. Có **7 trụ cột** gần như chắc chắn bị hỏi:
 
 | Trụ cột | Câu hỏi hay bị đào | Đọc file |
 |---|---|---|
@@ -14,10 +14,11 @@ Khác với backend/frontend truyền thống, phỏng vấn AI Engineer xoay qu
 | Agent & Tool Calling | "Agent khác chatbot chỗ nào? Function calling? MCP là gì?" | [04 — Agents & Tool Calling](./04-agents-tool-calling.md) |
 | Production | "Đo chất lượng thế nào? Chống prompt injection? Giảm cost/latency?" | [05 — Evaluation, Guardrails & Production](./05-evaluation-guardrails-production.md) |
 | Streaming & Multi-Provider | "Streaming/SSE thế nào? Tích hợp OpenAI/Anthropic/Google? Fallback? LLM Gateway?" | [06 — Streaming & Multi-Provider](./06-streaming-multi-provider.md) |
+| Fine-tuning | "Fine-tune khác RAG chỗ nào? LoRA là gì? Data chuẩn bị ra sao? Khi nào đáng làm?" | [07 — Fine-tuning](./07-fine-tuning.md) |
 
 ## Cách dùng bộ này
 
-1. Đọc lần lượt 01 → 06, mỗi câu vẫn theo cấu trúc quen thuộc của cả site: **Định nghĩa ngắn → Giải thích sâu → Bẫy & câu hỏi nối tiếp**.
+1. Đọc lần lượt 01 → 07, mỗi câu vẫn theo cấu trúc quen thuộc của cả site: **Định nghĩa ngắn → Giải thích sâu → Bẫy & câu hỏi nối tiếp**.
 2. Ký hiệu 🔥 = câu cực hay gặp, ưu tiên thuộc.
 3. Mục tiêu là **giải thích được trade-off**, không chỉ kể tên công cụ.
 
