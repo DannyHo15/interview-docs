@@ -101,6 +101,34 @@ await db.copyFrom(
 - Không parse SQL (text → binary trực tiếp).
 - Có thể **tắt index update tạm thời** (xem bước 4).
 
+### COPY gặp dữ liệu trùng thì sao? — pattern staging table 🔥
+
+**COPY không hỗ trợ `ON CONFLICT`.** Một row vi phạm unique constraint → **toàn bộ lệnh COPY fail** (abort, không vào row nào). Cách xử lý chuẩn: **COPY vào bảng tạm (staging) trước, rồi merge sang bảng thật bằng `INSERT ... SELECT ... ON CONFLICT`** — được cả tốc độ COPY lẫn xử lý trùng của ON CONFLICT:
+
+```sql
+-- 1. Staging: cấu trúc giống bảng thật nhưng KHÔNG có unique constraint/index
+--    → COPY không thể fail vì trùng, và load nhanh hơn (không update index)
+CREATE TEMP TABLE users_staging (LIKE users INCLUDING DEFAULTS);
+
+-- 2. COPY thẳng vào staging — full speed
+COPY users_staging (name, email) FROM STDIN WITH (FORMAT csv);
+
+-- 3. Merge sang bảng thật, xử lý trùng tại đây
+INSERT INTO users (name, email)
+SELECT DISTINCT ON (email) name, email   -- dedupe NGAY TRONG batch
+FROM users_staging
+ON CONFLICT (email) DO NOTHING;          -- hoặc DO UPDATE SET ...
+-- TEMP table tự hủy khi hết session — không cần dọn
+```
+
+Vì sao pattern này hay:
+
+- **`DISTINCT ON (email)`** dedupe trùng *nội bộ file CSV* trước khi merge → né luôn bẫy `cannot affect row a second time` của DO UPDATE (bước 5).
+- Staging là chỗ **validate/clean bằng SQL** trước khi cho vào bảng thật (lọc email rỗng, chuẩn hóa chữ thường...).
+- Trade-off: ghi 2 lần (staging + thật) — nhưng với volume lớn vẫn nhanh hơn hẳn multi-row INSERT, vì cả hai bước đều là thao tác bulk.
+
+> Lưu ý: Postgres 17 có `COPY ... (ON_ERROR ignore)` nhưng nó chỉ bỏ qua row **lỗi parse/kiểu dữ liệu** — vi phạm **unique constraint vẫn abort**. Staging table vẫn là câu trả lời cho conflict.
+
 ---
 
 ## Bước 4 — Kỹ thuật tối ưu khi bảng đã có dữ liệu & index
@@ -155,17 +183,53 @@ await db.tx(async (t) => {
 });
 ```
 
-### ✅ Insert với `ON CONFLICT` (upsert) — bỏ qua trùng lặp
+### ✅ Insert với `ON CONFLICT` (upsert) — xử lý trùng ngay trong câu bulk
+
+**Cơ chế:** trong một câu multi-row INSERT, DB xử lý **từng row** — row nào đụng **unique constraint** thì thay vì ném lỗi (hỏng cả câu + abort transaction), nó rẽ nhánh theo `ON CONFLICT`: **DO NOTHING** = bỏ qua row đó, **DO UPDATE** = update row cũ trong bảng. Row sạch vẫn insert bình thường. Tất cả trong **một câu atomic**, không exception.
+
+**Điều kiện bắt buộc:** cột trong `ON CONFLICT (...)` phải có **UNIQUE constraint/index**. Không có → Postgres báo lỗi `no unique or exclusion constraint matching the ON CONFLICT specification` (DB cần index unique để *phát hiện* trùng nhanh).
+
+**Ví dụ cụ thể** — bảng đang có `('Alice', 'alice@x.com')`, bulk insert 3 row trong đó 1 row trùng email:
 
 ```sql
-INSERT INTO users (name, email) VALUES ... 
-ON CONFLICT (email) DO NOTHING;   -- bỏ qua email đã có
+INSERT INTO users (name, email) VALUES
+  ('Alice Mới', 'alice@x.com'),   -- ⚠️ trùng email đã có
+  ('Bob',       'bob@x.com'),
+  ('Carol',     'carol@x.com')
+ON CONFLICT (email) DO NOTHING;
+-- Kết quả: Bob + Carol vào (rowCount = 2), row Alice bị BỎ QUA
+-- Bảng vẫn giữ 'Alice' cũ, không lỗi, transaction sống bình thường
 ```
 
 ```sql
--- Hoặc cập nhật nếu trùng
-ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name;
+-- DO UPDATE: row trùng thì GHI ĐÈ bằng giá trị mới
+INSERT INTO users (name, email) VALUES
+  ('Alice Mới', 'alice@x.com'),
+  ('Bob',       'bob@x.com')
+ON CONFLICT (email) DO UPDATE
+  SET name = EXCLUDED.name, updated_at = now();
+-- 'Alice' → 'Alice Mới' (update), Bob insert mới. rowCount = 2 (tính cả update)
 ```
+
+**`EXCLUDED` là gì?** Bảng ảo chứa **row bạn vừa định insert** (row bị từ chối). `SET name = EXCLUDED.name` = "lấy giá trị mới đè lên bản cũ". Có thể update có điều kiện:
+
+```sql
+ON CONFLICT (email) DO UPDATE
+  SET name = EXCLUDED.name
+  WHERE users.updated_at < EXCLUDED.updated_at;  -- chỉ đè khi data mới hơn
+```
+
+**Đếm inserted vs skipped** (báo cáo kiểu `inserted: 9.950, skipped: 50`):
+
+```js
+const res = await t.query(`INSERT ... ON CONFLICT (email) DO NOTHING`, params);
+const skipped = batch.length - res.rowCount;  // rowCount = số row thật sự vào
+// Muốn biết CỤ THỂ row nào vào: thêm RETURNING id/email rồi so với batch
+```
+
+**⚠️ Bẫy riêng của DO UPDATE — trùng ngay trong batch:** cùng một email xuất hiện **2 lần trong cùng câu INSERT** → Postgres báo lỗi `ON CONFLICT DO UPDATE command cannot affect row a second time` (không biết lấy bản nào). → Phải **dedupe trong app trước khi dựng batch**. `DO NOTHING` không dính bẫy này (bản thứ hai chỉ bị bỏ qua).
+
+**MySQL tương đương:** `INSERT IGNORE` (≈ DO NOTHING) và `INSERT ... ON DUPLICATE KEY UPDATE name = VALUES(name)` (≈ DO UPDATE).
 
 ### ✅ Insert `ordered: false` (MongoDB) — tiếp tục khi lỗi
 

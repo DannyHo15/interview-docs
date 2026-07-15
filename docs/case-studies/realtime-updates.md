@@ -174,6 +174,52 @@ Node 2 (đang giữ WS của User B) nhận → push xuống User B
 
 ---
 
+## Bước 7 — 🔥 "10.000 client WS cùng kết nối — làm sao KHÔNG MẤT dữ liệu?"
+
+Câu đào sâu kinh điển. Trước hết chỉnh lại đề: **10k connection không phải vấn đề hiệu năng** (epoll/kqueue xử lý được từ thời "c10k", chỉ cần tăng `ulimit` file descriptor + đủ RAM). Vấn đề thật là **độ tin cậy**: WS **không đảm bảo delivery** — client rớt mạng, server restart/deploy, buffer đầy là message bay màu. Muốn "không mất" phải tự xây **at-least-once delivery** ở tầng app.
+
+**Nguyên tắc vàng: WS là *transport*, không phải *storage*.** Đừng để bản duy nhất của một message chỉ tồn tại trong đường ống socket.
+
+### 4 tầng chống mất, theo thứ tự quan trọng
+
+**① Persist trước, push sau.** Event ghi vào **durable store** (DB / Redis Streams / Kafka) **trước**, rồi mới push qua WS. WS chỉ là kênh notify nhanh; **nguồn sự thật nằm trong store**. Client nào lỡ thì đọc lại từ store — mất push nhưng không mất data.
+
+```text
+❌ event → push WS → (rớt = mất vĩnh viễn)
+✅ event → ghi Redis Stream/DB → push WS → client lỡ thì replay từ stream
+```
+
+**② Seq + ack.** Mỗi message mang **số thứ tự tăng dần** (per user/channel). Client xử lý xong thì **ack**; server giữ message trong outbox tới khi được ack, chưa ack thì gửi lại. Client **dedupe theo seq** (vì at-least-once = có thể nhận trùng).
+
+**③ Resume khi reconnect.** Client nối lại kèm `lastSeq` → server **replay** mọi message sau seq đó từ event log:
+
+```js
+// Client reconnect
+socket.emit('resume', { lastSeq: 1041 });
+
+// Server: đọc lại từ Redis Stream (mỗi user 1 stream, id = seq)
+const missed = await redis.xrange(`events:${userId}`, `${lastSeq + 1}`, '+');
+missed.forEach(([id, fields]) => socket.emit('event', { seq: id, ...fields }));
+```
+
+(Socket.IO có *Connection State Recovery* làm sẵn việc này, nhưng **best-effort, in-memory** — production nghiêm túc vẫn cần event log riêng.)
+
+**④ Graceful shutdown khi deploy.** Deploy = mọi connection của node đó rớt cùng lúc. Drain đúng cách: ngừng nhận connection mới → flush outbox → báo client `reconnect` → tắt. Vì đã có ①+③, client nối sang node khác và replay — **deploy giữa giờ cao điểm không mất message nào**.
+
+### Khi scale nhiều node (HA cho 10k+)
+
+- **Redis pub/sub adapter** (Socket.IO adapter / tự build): event phát ở node A tới được user đang treo ở node B (đã nói ở Bước 5).
+- **Sticky session** ở LB để reconnect ổn định; registry `user → node` trong Redis.
+- **Backpressure per-connection:** client chậm → buffer giới hạn (vd 1MB), đầy thì **ngắt kết nối** và để nó resume qua replay ③ — đừng để một client chậm ăn RAM cả node. "Ngắt rồi replay" an toàn hơn "cố giữ rồi OOM".
+
+**Bẫy thường gặp:**
+
+- Tin rằng "TCP đảm bảo rồi" — TCP đảm bảo *trong một connection sống*; nó không cứu được message gửi lúc client offline hay khi connection chết giữa chừng.
+- Outbox/event log **không có TTL/trim** → Redis Stream phình vô hạn. Trim theo thời gian (`XTRIM MAXLEN`) — client offline quá lâu thì fetch lại từ DB thay vì replay.
+- **Câu hỏi nối tiếp:** *"At-least-once hay exactly-once?"* → Exactly-once thuần túy qua network là **không khả thi thực tế**; chuẩn công nghiệp là **at-least-once + idempotent consumer** (dedupe theo seq/eventId) — hiệu quả tương đương exactly-once.
+
+---
+
 ## Sơ đồ quyết định
 
 ```
