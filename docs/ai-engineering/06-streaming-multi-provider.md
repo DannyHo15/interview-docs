@@ -305,7 +305,19 @@ function feed(chunk: string, onEvent: (data: string) => void) {
 
    > `useStreamedText` cần nhận `stream` nullable — thêm `if (!stream) return;` ở đầu `useEffect` của nó.
 
-7. **Hiệu ứng “gõ chữ” (typewriter) là tùy chọn, không bắt buộc.** Nếu muốn mượt hơn tốc độ token thật, đệm token vào queue rồi nhả đều theo interval — nhưng cân nhắc: nó **thêm độ trễ cảm nhận**. Thường token tự nhiên đã đủ mượt, đừng thêm phức tạp khi chưa cần.
+7. **Hiệu ứng “gõ chữ” (typewriter) là tùy chọn, không bắt buộc.** Nếu muốn mượt hơn tốc độ token thật, đừng tự viết queue — Vercel AI SDK có sẵn `smoothStream()` (một dòng, transform ngay phía server). Cân nhắc: nó **thêm độ trễ cảm nhận**; token tự nhiên thường đã đủ mượt.
+
+**Có tối ưu hơn nữa không? — nâng cấp chọn lọc, ưu tiên native trước:**
+
+| Nâng cấp | Thay cho / lợi gì | Giá phải trả |
+|---|---|---|
+| CSS `flex-direction: column-reverse` trên khung chat | Trình duyệt **tự dính đáy**, thay cả hook `useStickToBottom` (đòn 4) bằng 1 dòng CSS | DOM đảo ngược → select text/a11y hơi lạ; test kỹ Safari |
+| CSS `content-visibility: auto` cho block đã đóng | Browser **bỏ qua layout/paint** block ngoài màn hình → chat dài mượt hẳn, 1 dòng CSS | Hầu như không; cần `contain-intrinsic-size` để scroll không nhảy |
+| `useDeferredValue(text)` cho block đang chảy | Parse markdown bị **hạ ưu tiên** → input/scroll không bao giờ kẹt; React có sẵn | Block cuối có thể vẽ trễ hơn 1–2 frame (không nhận ra) |
+| Parser markdown **incremental** (vd lib `streaming-markdown`) | Parse **append-only thật sự** — O(n) tổng thay vì re-parse block cuối mỗi frame | Thêm dependency — chỉ đáng khi block cuối rất dài (code block ngàn dòng) |
+| Virtualize lịch sử chat (`react-window`) | Chỉ render message trong viewport | Chỉ cần khi lịch sử hàng trăm message; thêm phức tạp scroll |
+
+Thứ tự cân nhắc đúng “ladder”: **CSS trước** (2 dòng đầu, gần như miễn phí) → **React có sẵn** (`useDeferredValue`) → **thêm dependency** (2 dòng cuối) chỉ khi đo thấy chưa đủ. Bộ đòn 1–6 + 2 dòng CSS là đủ cho đa số chat app.
 
 **Bẫy thường gặp:**
 
@@ -313,6 +325,7 @@ function feed(chunk: string, onEvent: (data: string) => void) {
 - Re-parse toàn bộ markdown mỗi frame trên câu trả lời dài → về cuối stream thấy **chậm dần đều**, dấu hiệu kinh điển của O(n²) parse.
 - Auto-scroll vô điều kiện → user không đọc lại được đoạn trên vì bị kéo xuống liên tục.
 - **Câu hỏi nối tiếp:** *"Nếu dùng Vercel AI SDK thì còn phải tự lo mấy cái này không?"* → `useChat`/`useCompletion` đã lo batching, abort, accumulate string cho bạn; phần **còn phải tự làm** thường là *auto-scroll dính đáy* và *tối ưu render markdown* (memo block đã đóng) — hai thứ SDK không quyết hộ vì thuộc về UI.
+- **Câu hỏi nối tiếp:** *"Sao không dùng `useSyncExternalStore` thay `useState`?"* → Nó chỉ đổi **chỗ đặt state**, không đổi **tần suất render** — notify mỗi token vẫn re-render mỗi token, vẫn phải rAF-batch y như cũ. Điểm trừ kín: update qua nó là **render đồng bộ** (React tắt concurrent rendering để tránh tearing) → triệt tiêu lợi ích `useDeferredValue` ở bảng trên. Chỉ đáng dùng khi **nhiều component xa nhau** cùng đọc một stream (body + token counter + tab title) — đó là lý do *thư viện* như `useChat` dùng external store bên trong, còn *app* thì `useState` trong leaf component là đủ.
 
 ---
 
