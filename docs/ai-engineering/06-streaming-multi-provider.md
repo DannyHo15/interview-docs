@@ -54,6 +54,63 @@
 4. **Lỗi giữa luồng (error mid-stream):** đang stream mà model/mạng lỗi → gửi **event error rõ ràng** cho FE, **không để kết nối treo** (client chờ vô hạn).
 5. **Backpressure:** client tiêu thụ chậm hơn tốc độ đẩy → cần xử lý luồng đúng (SDK/stream API lo phần lớn, nhưng phải ý thức).
 
+**Ví dụ — client tiêu thụ stream đúng cách (bẫy 2 & 4):**
+
+```tsx
+function useChatStream() {
+  const controllerRef = useRef<AbortController | null>(null);
+
+  async function send(prompt: string, onToken: (t: string) => void) {
+    controllerRef.current?.abort();            // hủy request cũ nếu còn chạy
+    const controller = new AbortController();
+    controllerRef.current = controller;
+
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+      signal: controller.signal,               // (2) abort/cancel
+    });
+    if (!res.ok || !res.body) throw new Error(`stream failed: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        onToken(decoder.decode(value, { stream: true }));
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') throw err; // (4) chỉ lỗi thật mới ném
+    }
+  }
+
+  // (2) cleanup khi unmount → không để generation "mồ côi" đốt token
+  useEffect(() => () => controllerRef.current?.abort(), []);
+  return { send };
+}
+```
+
+**Ví dụ — tự parse SSE khi buộc phải (bẫy 1: chunk mạng cắt ngang):**
+
+```ts
+// Chunk từ mạng có thể tới GIỮA một event → không parse thô, phải buffer
+let buffer = '';
+function feed(chunk: string, onEvent: (data: string) => void) {
+  buffer += chunk;
+  const parts = buffer.split('\n\n'); // các event ngăn nhau bằng dòng trống
+  buffer = parts.pop() ?? '';         // phần cuối có thể chưa đủ → giữ lại chờ chunk sau
+  for (const part of parts) {
+    const line = part.split('\n').find((l) => l.startsWith('data: '));
+    if (line) onEvent(line.slice(6)); // bỏ 6 ký tự 'data: '
+  }
+}
+
+// demo: chunk tới cắt ngang "data: hel" | "lo\n\n" → vẫn ghép đúng "hello"
+// feed('data: hel', console.log);      // (chưa in gì — event chưa đủ)
+// feed('lo\n\ndata: world\n\n', ...);  // → in "hello" rồi "world"
+```
+
 **Bẫy thường gặp:**
 
 - Quên `AbortController` → user spam gửi/hủy làm server chạy hàng loạt generation "mồ côi", đốt tiền.
@@ -114,6 +171,8 @@
   - **Guardrail chung**: lọc PII, chặn nội dung độc, kiểm định output (xem [file 05](./05-evaluation-guardrails-production.md)).
   - **Quản lý secret** API key tập trung; **prompt template / version** dùng chung.
 - Nâng lên tầm **platform toàn công ty**: multi-tenant, **RBAC**, model catalog, usage quota, audit log — đúng tầm nhìn "AI-Native organization".
+
+> 📦 **Ví dụ chạy được:** [`examples/llm-gateway`](https://github.com/DannyHo15/interview-docs/tree/main/examples/llm-gateway) — gateway Elysia + Vercel AI SDK ~150 dòng minh hoạ đủ auth per-app, rate-limit/quota, fallback Gemini→GPT, cost tracking và `/metrics`. Bảng map từng mối lo → dòng code nằm trong README.
 
 **Bẫy thường gặp:**
 
