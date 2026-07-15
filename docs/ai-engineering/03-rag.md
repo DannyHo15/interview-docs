@@ -210,9 +210,10 @@ const { embedding: queryVec } = await embed({ model, value: question });
 | **Pinecone / managed** | Không muốn tự vận hành, cần scale lớn, sẵn tiền |
 | **Qdrant / Weaviate / Milvus** | Cần tính năng vector chuyên sâu, self-host, filter phức tạp |
 
-- Bên trong dùng **index ANN** như **HNSW** (đồ thị nhiều tầng, truy vấn nhanh, chính xác cao) hoặc IVF. Đánh đổi: **tốc độ ↔ độ chính xác (recall) ↔ bộ nhớ**.
-- Đo "gần nhau" bằng **cosine similarity** (phổ biến nhất cho text).
-- **Metadata filtering:** lưu kèm metadata (nguồn, phòng ban, ngày, quyền xem) để lọc *trước/trong* lúc search — vd chỉ tìm trong tài liệu user được phép đọc. Đây là tính năng production hay bị bỏ quên.
+- **Vì sao cần "index"?** Kho có thể hàng triệu vector — so câu hỏi với **từng** cái thì quá chậm. **ANN** (Approximate Nearest Neighbor = "tìm hàng xóm gần đúng") bỏ qua hầu hết vector, chỉ xét vùng có khả năng gần → nhanh gấp nhiều lần, đổi lại thỉnh thoảng bỏ sót vài kết quả (chấp nhận được cho search ngữ nghĩa).
+- **HNSW, IVF là gì?** Chỉ là hai cách dựng "bản đồ đường tắt" giúp nhảy nhanh tới vùng gần. Nhớ gọn: **HNSW là loại phổ biến nhất — nhanh và chính xác, đổi lại tốn RAM.** Chỉnh tham số của nó thực chất là cân **3 thứ đối nghịch**: nhanh hơn ↔ ít bỏ sót hơn ↔ tốn ít RAM hơn — được cái này thường mất cái kia.
+- **"Gần nhau" đo bằng cosine similarity:** xem hai vector có **cùng hướng** không. Càng cùng hướng càng gần nghĩa — **1 = trùng ý, 0 = chẳng liên quan**. Đây là thước đo mặc định cho text.
+- **Metadata filtering — lọc bằng điều kiện thường, không phải vector.** Mỗi chunk lưu thêm nhãn (nguồn, phòng ban, ngày, ai được xem). Lúc search ép thêm điều kiện, vd "chỉ tìm trong tài liệu user này được phép đọc" — đúng dòng `WHERE metadata->>'team' = 'live-ops'` ở snippet trên. Hay bị bỏ quên nhưng cực cần cho production (phân quyền, lọc nhiễu).
 
 ```sql
 -- Bảng lưu chunk + vector (pgvector)
