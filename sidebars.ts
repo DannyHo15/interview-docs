@@ -173,6 +173,8 @@ const sidebars: SidebarsConfig = {
         'cv/cmc-global-ai-solution',
         'cv/interview_prep_fpt_telecom',
         'cv/interview_prep_vnggames',
+        'cv/vnggames_final_round',
+        'cv/vnggames_nghiem_followups',
         'cv/evn-genco3-techniques',
         'cv/project-inspectai',
         'cv/project-gencodify',
