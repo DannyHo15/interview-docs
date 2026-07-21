@@ -150,7 +150,12 @@ Cũng có RabbitMQ service riêng (direct exchange + DLQ 7-day TTL, retry max 3)
 > *"Bottleneck: Gemini rate limit + Socket.IO per-pod. Giải: (1) Gemini rate limiter ở service, (2) wire `@socket.io/redis-adapter` (đã dep, chưa wire — debt tôi note), (3) scale pod HPA theo queue depth."*
 
 ### Q: "Vì sao prompt DB-driven không hardcode?"
-> *"Compliance rule đổi liên tục (luật Nhật cập nhật). Prompt Manager module cho operator sửa prompt + version mà không deploy. `getActivePromptConfig()` load từ DB, cache Redis, event `FORBIDDEN_WORDS_CHANGED` invalidate."*
+> *"Compliance rule đổi liên tục (luật Nhật cập nhật). Prompt Manager module cho operator sửa prompt + version mà không deploy. `getActivePromptConfig()` load từ DB, cache Redis TTL 1h (`activePromptCacheTtl`)."*
+
+> ⚠️ **Sửa lại cho đúng (đã verify source):** Prompt cache **không** invalidate bởi event `FORBIDDEN_WORDS_CHANGED`. Đó là 2 cơ chế tách biệt:
+> - **Prompt cache**: tự invalidate trực tiếp trong CRUD của chính nó (`create`/`updateById`/`softRemoveById` gọi `invalidateActivePromptCache()`).
+> - **Forbidden-words cache**: event `forbidden_words.changed` được consume bởi `NLPCloudService.handleForbiddenWordsChanged` để refresh **regex pattern**, không liên quan prompt.
+> Nếu bị hỏi vặn "cache nào invalidate bởi event nào" → nói rõ 2 cái tách biệt, đừng gộp chung.
 
 ### Q: "K8s rollout có làm sột cuộc họp không?"
 > *"maxUnavailable: 0 + PDB minAvailable: 1 + graceful 30s drain. Socket reconnect auto (Socket.IO built-in), meeting state ở Redis nên pod mới pick up được. Recall WSS thì Recall retry."*
@@ -170,6 +175,7 @@ Cũng có RabbitMQ service riêng (direct exchange + DLQ 7-day TTL, retry max 3)
 - `@socket.io/redis-adapter` chưa wire → multi-pod broadcast là TODO.
 - Cả BullMQ + RabbitMQ + Kafka dep tồn tại → consolidate messaging stack là cleanup kế tiếp.
 - Gemini `thinkingBudget:0` đánh đổi accuracy → cần eval set để tune.
+- **Bug thật tìm thấy khi audit lại:** `audit-log.gateway.ts` subscribe event `detech_valid_word_result` (typo, chữ "detech") nhưng `nlp-cloud-queue.ts` lại emit `detect_valid_word_result` (đúng chính tả) → 2 bên lệch tên event, audit-log namespace **không bao giờ nhận được** kết quả detect qua đường này. *Câu dùng khi bị hỏi "tìm bug trong code em chưa?": "Dạ có, em audit lại thấy tên event bị lệch chính tả giữa 2 gateway do lúc viết code em gõ nhầm 'detech' — đây là loại bug rất dễ miss vì TypeScript không catch được string literal mismatch giữa emit/subscribe, phải có type-safe event contract (enum/const) mới tránh được."*
 
 ---
 

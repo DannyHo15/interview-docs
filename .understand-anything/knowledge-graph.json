@@ -1,0 +1,361 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "llm-gateway-example",
+    "languages": ["typescript"],
+    "frameworks": ["elysia", "vercel-ai-sdk", "bun"],
+    "description": "Minimal runnable LLM gateway (Bun + Elysia + Vercel AI SDK): a thin layer in front of OpenAI/Google that centralizes secrets, per-app auth, rate-limiting, monthly token quota, Gemini→GPT fallback, cost tracking and observability, so calling apps don't reimplement these cross-cutting concerns.",
+    "analyzedAt": "2026-07-15T19:49:34Z",
+    "gitCommitHash": "c7fbee772d1f37c6d01849e21ca6f4ad9727c425"
+  },
+  "nodes": [
+    {
+      "id": "document:examples/llm-gateway/README.md",
+      "type": "document",
+      "name": "README.md",
+      "filePath": "examples/llm-gateway/README.md",
+      "summary": "Overview of the minimal LLM gateway example; maps each cross-cutting concern (centralized secret, auth registry, rate-limit, quota, multi-provider fallback, cost tracking, observability, dashboard-lite) to where it lives in the code, plus run/test/curl instructions and a list of intentionally-omitted prod concerns.",
+      "tags": ["docs", "overview", "gateway"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:examples/llm-gateway/package.json",
+      "type": "config",
+      "name": "package.json",
+      "filePath": "examples/llm-gateway/package.json",
+      "summary": "Bun + Elysia project manifest. Dependencies: Vercel AI SDK (@ai-sdk/openai, @ai-sdk/google, ai) and elysia. Scripts: dev/start run src/index.ts under Bun, test runs bun test.",
+      "tags": ["config", "manifest", "bun", "elysia"],
+      "complexity": "simple"
+    },
+    {
+      "id": "config:examples/llm-gateway/.env.example",
+      "type": "config",
+      "name": ".env.example",
+      "filePath": "examples/llm-gateway/.env.example",
+      "summary": "Env template: provider API keys (OPENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY) and PORT. Kept server-side so client apps authenticate with a gateway key and never see provider keys.",
+      "tags": ["config", "env", "secrets"],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:examples/llm-gateway/src/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "examples/llm-gateway/src/index.ts",
+      "summary": "Thin Elysia facade. Derives the app from the x-api-key header (401 on unknown key), exposes POST /v1/chat (delegates to handle, maps GateError to status) and GET /metrics, then listens on PORT (default 4000).",
+      "tags": ["entry", "http", "elysia", "auth"],
+      "complexity": "simple",
+      "languageNotes": "Uses Elysia .derive() to attach `app` to the request context after key validation; t.Object body schema validates the chat payload."
+    },
+    {
+      "id": "file:examples/llm-gateway/src/gateway.ts",
+      "type": "file",
+      "name": "gateway.ts",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Gateway core: per-app registry + centralized secret, fixed-window rate limit, monthly token quota, ordered provider chain (Gemini→GPT) with 20s per-call timeout and fallback, per-app cost/usage metrics, and JSON-line observability. In-memory state (ponytail: swap to Redis+Postgres for prod).",
+      "tags": ["core", "gateway", "rate-limit", "quota", "fallback", "cost", "observability"],
+      "complexity": "moderate",
+      "languageNotes": "Module-level singletons (APPS, windows, usage, CHAIN) hold in-memory state; handle() is the single gate function every request flows through."
+    },
+    {
+      "id": "file:examples/llm-gateway/src/ratelimit.ts",
+      "type": "file",
+      "name": "ratelimit.ts",
+      "filePath": "examples/llm-gateway/src/ratelimit.ts",
+      "summary": "Pure fixed-window rate limiter (requests/min): takes a window, rpm and clock value, returns {allowed, win}. Dependency-free so it can be unit-tested in isolation with an injected clock.",
+      "tags": ["policy", "rate-limit", "pure"],
+      "complexity": "simple",
+      "languageNotes": "Now-injected (number) keeps the function deterministic and testable without timers."
+    },
+    {
+      "id": "file:examples/llm-gateway/src/gateway.test.ts",
+      "type": "file",
+      "name": "gateway.test.ts",
+      "filePath": "examples/llm-gateway/src/gateway.test.ts",
+      "summary": "Bun tests for the rate-limit money-path: allows up to rpm requests then blocks the next, and reopens after the window resets. Covers the core policy primitive rather than the full HTTP path.",
+      "tags": ["test", "rate-limit", "bun-test"],
+      "complexity": "simple"
+    },
+    {
+      "id": "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat",
+      "type": "endpoint",
+      "name": "POST /v1/chat",
+      "filePath": "examples/llm-gateway/src/index.ts",
+      "summary": "Primary chat endpoint. Validates body {messages:[{role,content}]}, calls handle(app, messages), and maps a thrown GateError to its HTTP status (429/402/502).",
+      "tags": ["endpoint", "http", "chat"],
+      "complexity": "simple"
+    },
+    {
+      "id": "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics",
+      "type": "endpoint",
+      "name": "GET /metrics",
+      "filePath": "examples/llm-gateway/src/index.ts",
+      "summary": "Dashboard-lite endpoint returning per-app usage counters (requests, tokens, costUsd, fallbacks, errors) for the whole company.",
+      "tags": ["endpoint", "http", "metrics", "dashboard"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:appByKey",
+      "type": "function",
+      "name": "appByKey",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Look up an AppConfig by its gateway API key; returns undefined for unknown keys. Used by index.ts auth derive.",
+      "tags": ["auth", "registry"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:handle",
+      "type": "function",
+      "name": "handle",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Main gate. Enforces rate-limit (throws 429) and monthly token quota (throws 402), then runs the provider chain with a 20s per-provider timeout, falls back on error, records usage/cost, and returns {provider, text, tokens}. Throws 502 if all providers fail.",
+      "tags": ["core", "gate", "fallback", "quota"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:metrics",
+      "type": "function",
+      "name": "metrics",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Return a snapshot of the per-app usage map (requests, tokens, costUsd, fallbacks, errors).",
+      "tags": ["metrics", "observability"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:estimateCost",
+      "type": "function",
+      "name": "estimateCost",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Estimate USD cost from a token count using a per-model price table (USD per 1M tokens).",
+      "tags": ["cost"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:bump",
+      "type": "function",
+      "name": "bump",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Merge a partial usage patch into the per-app usage map, creating the entry on first write.",
+      "tags": ["metrics", "usage"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:withTimeout",
+      "type": "function",
+      "name": "withTimeout",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Race a promise against a timeout rejection; used to cap each provider call so a slow provider triggers fallback.",
+      "tags": ["timeout", "resilience"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/gateway.ts:log",
+      "type": "function",
+      "name": "log",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Emit one JSON line per request (timestamp, app, provider, tokens, ms, ok/fallback/error) to stdout. ponytail: prod pushes to OTel/log store.",
+      "tags": ["observability", "logging"],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:examples/llm-gateway/src/ratelimit.ts:rateLimit",
+      "type": "function",
+      "name": "rateLimit",
+      "filePath": "examples/llm-gateway/src/ratelimit.ts",
+      "summary": "Pure fixed-window check: when the window is missing/expired, start a fresh 60s window; allow while count < rpm, otherwise block. Returns {allowed, win}.",
+      "tags": ["rate-limit", "policy", "pure"],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:examples/llm-gateway/src/gateway.ts:AppConfig",
+      "type": "class",
+      "name": "AppConfig",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Per-app configuration shape: id, name, rpm limit, and monthlyTokenBudget quota.",
+      "tags": ["type", "config", "auth"],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:examples/llm-gateway/src/gateway.ts:GateError",
+      "type": "class",
+      "name": "GateError",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Thrown gate error shape {status, message}; statuses include 429 (rate limit), 402 (quota), 502 (all providers failed).",
+      "tags": ["type", "error"],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:examples/llm-gateway/src/gateway.ts:Usage",
+      "type": "class",
+      "name": "Usage",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Per-app accumulated counters: requests, tokens, costUsd, fallbacks, errors.",
+      "tags": ["type", "metrics"],
+      "complexity": "simple"
+    },
+    {
+      "id": "class:examples/llm-gateway/src/ratelimit.ts:Window",
+      "type": "class",
+      "name": "Window",
+      "filePath": "examples/llm-gateway/src/ratelimit.ts",
+      "summary": "Rate-limit window state: {count, resetAt}.",
+      "tags": ["type", "rate-limit"],
+      "complexity": "simple"
+    },
+    {
+      "id": "concept:provider-fallback-chain",
+      "type": "concept",
+      "name": "Provider fallback chain",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Ordered provider chain (Gemini 2.0 Flash → GPT-4o-mini) with a per-call timeout; on failure the next provider is tried, and a 502 is surfaced only if all fail. ponytail: prod should only fail over on transient errors (5xx/429/timeout), not bad input.",
+      "tags": ["concept", "fallback", "resilience", "multi-provider"],
+      "complexity": "moderate"
+    },
+    {
+      "id": "concept:centralized-secret",
+      "type": "concept",
+      "name": "Centralized provider secret",
+      "filePath": "examples/llm-gateway/src/gateway.ts",
+      "summary": "Calling apps authenticate with a gateway API key only; provider keys (OpenAI/Google) live in the gateway's .env and are never exposed to callers, so key rotation/revocation is centralized.",
+      "tags": ["concept", "secret", "security"],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "file:examples/llm-gateway/src/gateway.ts", "type": "imports", "weight": 0.7 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "file:examples/llm-gateway/src/ratelimit.ts", "type": "imports", "weight": 0.7 },
+    { "source": "file:examples/llm-gateway/src/gateway.test.ts", "target": "file:examples/llm-gateway/src/ratelimit.ts", "type": "imports", "weight": 0.7 },
+
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:appByKey", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:handle", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:metrics", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:estimateCost", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:bump", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:withTimeout", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:log", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "class:examples/llm-gateway/src/gateway.ts:AppConfig", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "class:examples/llm-gateway/src/gateway.ts:GateError", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "class:examples/llm-gateway/src/gateway.ts:Usage", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/ratelimit.ts", "target": "function:examples/llm-gateway/src/ratelimit.ts:rateLimit", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/ratelimit.ts", "target": "class:examples/llm-gateway/src/ratelimit.ts:Window", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat", "type": "contains", "weight": 1.0 },
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics", "type": "contains", "weight": 1.0 },
+
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:appByKey", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:handle", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "function:examples/llm-gateway/src/gateway.ts:metrics", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "class:examples/llm-gateway/src/gateway.ts:AppConfig", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/gateway.ts", "target": "class:examples/llm-gateway/src/gateway.ts:GateError", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/ratelimit.ts", "target": "function:examples/llm-gateway/src/ratelimit.ts:rateLimit", "type": "exports", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/ratelimit.ts", "target": "class:examples/llm-gateway/src/ratelimit.ts:Window", "type": "exports", "weight": 0.8 },
+
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat", "type": "serves", "weight": 0.5 },
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics", "type": "serves", "weight": 0.5 },
+
+    { "source": "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat", "target": "function:examples/llm-gateway/src/gateway.ts:handle", "type": "calls", "weight": 0.8 },
+    { "source": "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics", "target": "function:examples/llm-gateway/src/gateway.ts:metrics", "type": "calls", "weight": 0.8 },
+    { "source": "file:examples/llm-gateway/src/index.ts", "target": "function:examples/llm-gateway/src/gateway.ts:appByKey", "type": "calls", "weight": 0.8 },
+    { "source": "function:examples/llm-gateway/src/gateway.ts:handle", "target": "function:examples/llm-gateway/src/ratelimit.ts:rateLimit", "type": "calls", "weight": 0.8 },
+    { "source": "function:examples/llm-gateway/src/gateway.ts:handle", "target": "function:examples/llm-gateway/src/gateway.ts:estimateCost", "type": "calls", "weight": 0.8 },
+    { "source": "function:examples/llm-gateway/src/gateway.ts:handle", "target": "function:examples/llm-gateway/src/gateway.ts:bump", "type": "calls", "weight": 0.8 },
+    { "source": "function:examples/llm-gateway/src/gateway.ts:handle", "target": "function:examples/llm-gateway/src/gateway.ts:withTimeout", "type": "calls", "weight": 0.8 },
+    { "source": "function:examples/llm-gateway/src/gateway.ts:handle", "target": "function:examples/llm-gateway/src/gateway.ts:log", "type": "calls", "weight": 0.8 },
+
+    { "source": "file:examples/llm-gateway/src/ratelimit.ts", "target": "file:examples/llm-gateway/src/gateway.test.ts", "type": "tested_by", "weight": 0.5 },
+
+    { "source": "document:examples/llm-gateway/README.md", "target": "file:examples/llm-gateway/src/index.ts", "type": "documents", "weight": 0.5 },
+    { "source": "document:examples/llm-gateway/README.md", "target": "file:examples/llm-gateway/src/gateway.ts", "type": "documents", "weight": 0.5 },
+    { "source": "document:examples/llm-gateway/README.md", "target": "file:examples/llm-gateway/src/ratelimit.ts", "type": "documents", "weight": 0.5 },
+    { "source": "document:examples/llm-gateway/README.md", "target": "config:examples/llm-gateway/.env.example", "type": "documents", "weight": 0.5 },
+
+    { "source": "config:examples/llm-gateway/package.json", "target": "file:examples/llm-gateway/src/index.ts", "type": "configures", "weight": 0.6 },
+    { "source": "config:examples/llm-gateway/.env.example", "target": "file:examples/llm-gateway/src/gateway.ts", "type": "configures", "weight": 0.6 },
+
+    { "source": "concept:provider-fallback-chain", "target": "function:examples/llm-gateway/src/gateway.ts:handle", "type": "related", "weight": 0.5 },
+    { "source": "concept:centralized-secret", "target": "config:examples/llm-gateway/.env.example", "type": "related", "weight": 0.5 },
+    { "source": "concept:centralized-secret", "target": "function:examples/llm-gateway/src/gateway.ts:appByKey", "type": "related", "weight": 0.5 }
+  ],
+  "layers": [
+    {
+      "id": "layer:docs",
+      "name": "Documentation",
+      "description": "Narrative docs that map gateway concerns to code and give run/test instructions.",
+      "nodeIds": ["document:examples/llm-gateway/README.md"]
+    },
+    {
+      "id": "layer:config",
+      "name": "Configuration",
+      "description": "Project manifest and environment template (provider secrets, port).",
+      "nodeIds": ["config:examples/llm-gateway/package.json", "config:examples/llm-gateway/.env.example"]
+    },
+    {
+      "id": "layer:http-entry",
+      "name": "HTTP entry & auth",
+      "description": "Thin Elysia facade: x-api-key auth, route definitions, and the endpoints it serves.",
+      "nodeIds": [
+        "file:examples/llm-gateway/src/index.ts",
+        "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat",
+        "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics"
+      ]
+    },
+    {
+      "id": "layer:gateway-core",
+      "name": "Gateway core",
+      "description": "The gate: per-app registry, rate-limit + quota enforcement, provider fallback chain, cost tracking and observability.",
+      "nodeIds": ["file:examples/llm-gateway/src/gateway.ts"]
+    },
+    {
+      "id": "layer:policy",
+      "name": "Policy primitives",
+      "description": "Pure, dependency-free policy logic extracted for isolated testing.",
+      "nodeIds": ["file:examples/llm-gateway/src/ratelimit.ts"]
+    },
+    {
+      "id": "layer:tests",
+      "name": "Tests",
+      "description": "Bun tests covering the rate-limit money-path.",
+      "nodeIds": ["file:examples/llm-gateway/src/gateway.test.ts"]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "Overview & concern map",
+      "description": "Start at the README: it maps each cross-cutting concern (centralized secret, auth, rate-limit, quota, fallback, cost, observability) to the exact file/function that implements it, and lists what is intentionally omitted for prod.",
+      "nodeIds": ["document:examples/llm-gateway/README.md"]
+    },
+    {
+      "order": 2,
+      "title": "Stack & dependencies",
+      "description": "The package.json shows the stack: Bun runtime, Elysia web framework, and the Vercel AI SDK with OpenAI + Google providers. Note generateText (non-streaming) is chosen so usage/cost is available at the end of the call.",
+      "nodeIds": ["config:examples/llm-gateway/package.json"],
+      "languageLesson": "Bun treats .env and TS natively; `type: module` + `bun run src/index.ts` is the whole dev loop."
+    },
+    {
+      "order": 3,
+      "title": "HTTP entry & auth",
+      "description": "index.ts is a deliberately thin facade: Elysia .derive() validates x-api-key via appByKey (401 on miss), then POST /v1/chat delegates to handle and GET /metrics returns counters. Apps never see provider keys.",
+      "nodeIds": ["file:examples/llm-gateway/src/index.ts", "endpoint:examples/llm-gateway/src/index.ts:POST-/v1/chat", "endpoint:examples/llm-gateway/src/index.ts:GET-/metrics"],
+      "languageLesson": "Elysia's .derive() runs before handlers and attaches typed context (`app`), so auth lives in one place instead of each route."
+    },
+    {
+      "order": 4,
+      "title": "The gate: limit → quota → fallback → cost",
+      "description": "handle() is the single function every request flows through: rate-limit (429), monthly token quota (402), then the Gemini→GPT chain with a 20s per-call timeout and fallback, recording usage/cost and emitting a JSON log line. Throw 502 if all providers fail.",
+      "nodeIds": ["file:examples/llm-gateway/src/gateway.ts", "function:examples/llm-gateway/src/gateway.ts:handle", "concept:provider-fallback-chain"],
+      "languageLesson": "In-memory Maps hold state for the demo; ponytail: markers flag Redis (limits) + Postgres (usage/audit) for prod."
+    },
+    {
+      "order": 5,
+      "title": "Pure policy primitive",
+      "description": "rateLimit is extracted into its own dependency-free file with an injected clock, which is exactly what makes it unit-testable without timers.",
+      "nodeIds": ["file:examples/llm-gateway/src/ratelimit.ts", "function:examples/llm-gateway/src/ratelimit.ts:rateLimit"],
+      "languageLesson": "Passing `now` as a parameter (instead of calling Date.now() inside) is the difference between testable and untestable time-dependent code."
+    },
+    {
+      "order": 6,
+      "title": "Tests & secrets",
+      "description": "The test file locks the rate-limit money-path (allow-to-rpm then block, reopen on window reset). Finally, .env.example holds the provider keys server-side — the centralized-secret concept the whole gateway is built around.",
+      "nodeIds": ["file:examples/llm-gateway/src/gateway.test.ts", "config:examples/llm-gateway/.env.example", "concept:centralized-secret"]
+    }
+  ]
+}

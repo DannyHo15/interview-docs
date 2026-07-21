@@ -1,0 +1,9 @@
+{
+  "lastAnalyzedAt": "2026-07-15T19:49:34Z",
+  "gitCommitHash": "c7fbee772d1f37c6d01849e21ca6f4ad9727c425",
+  "version": "1.0.0",
+  "analyzedFiles": 7,
+  "scope": "examples/",
+  "analysisMode": "direct-author (scope=7 files, full context in session)",
+  "skipped": ["fingerprints (Phase 7.2.5) — @understand-anything/core not installed"]
+}
